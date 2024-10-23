@@ -4,12 +4,14 @@ library(rstatix)
 library(readxl)
 library(magrittr)
 library(dplyr)
+library(AUC)
 
 # Start fresh by removing everything from the environment
 rm(list = ls())
 
 # Set working directory
-setwd("E:/Nav Stress Data/Salimetrics reports") # for hard drive
+setwd("D:/Nav Stress Data/Salimetrics reports") # for laptop
+#setwd("E:/Nav Stress Data/Salimetrics reports") # for hard drive
 
 # Enter the data 
 samples9Data <- readxl::read_excel("saliva_data_bySubject.xlsx", sheet = "9samples")
@@ -133,3 +135,16 @@ ggplot(data = no_outliers_allData, aes(x=factor(time, level = level_order), y=lo
   facet_wrap(vars(condition), labeller = labeller(condition = cond.labs)) +
   labs(x = "Time", y = " Log Cortisol (log nmol/L)" )
 
+########### trying AUC stuff
+
+AUC(x=c(1,3), y=c(1,1))
+
+AUC(x=c(1,2,3), y=c(1,2,4), method="trapezoid")
+AUC(x=c(1,2,3), y=c(1,2,4), method="step")
+
+plot(x=c(1,2,2.5), y=c(1,2,4), type="l", col="blue", ylim=c(0,4))
+lines(x=c(1,2,2.5), y=c(1,2,4), type="s", col="red")
+
+x <- seq(0, pi, length.out=200)
+AUC(x=x, y=sin(x)) 
+AUC(x=x, y=sin(x), method="spline") 
