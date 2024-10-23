@@ -4,14 +4,14 @@ library(rstatix)
 library(readxl)
 library(magrittr)
 library(dplyr)
-library(AUC)
+library(pROC)
 
 # Start fresh by removing everything from the environment
 rm(list = ls())
 
 # Set working directory
-setwd("D:/Nav Stress Data/Salimetrics reports") # for laptop
-#setwd("E:/Nav Stress Data/Salimetrics reports") # for hard drive
+#setwd("D:/Nav Stress Data/Salimetrics reports") # for laptop
+setwd("E:/Nav Stress Data/Salimetrics reports") # for hard drive
 
 # Enter the data 
 samples9Data <- readxl::read_excel("saliva_data_bySubject.xlsx", sheet = "9samples")
@@ -137,14 +137,79 @@ ggplot(data = no_outliers_allData, aes(x=factor(time, level = level_order), y=lo
 
 ########### trying AUC stuff
 
-AUC(x=c(1,3), y=c(1,1))
+# calculate area under curve
+x <- c(1,2,3)
+y <- c(2,5,3)
+plot(x,y)
+lines(x,y)
 
-AUC(x=c(1,2,3), y=c(1,2,4), method="trapezoid")
-AUC(x=c(1,2,3), y=c(1,2,4), method="step")
+auc <- trapz(x,y)
 
-plot(x=c(1,2,2.5), y=c(1,2,4), type="l", col="blue", ylim=c(0,4))
-lines(x=c(1,2,2.5), y=c(1,2,4), type="s", col="red")
+# Example data: 4 pairs of x and y values
+x <- c(1, 2, 3, 4)
+y <- c(2,2,2,2)
 
-x <- seq(0, pi, length.out=200)
-AUC(x=x, y=sin(x)) 
-AUC(x=x, y=sin(x), method="spline") 
+# Calculate area under the curve
+auc <- trapz(x, y)
+print(paste("AUC:", auc))
+
+# Plot the curve
+plot(x, y, type = "b", col = "blue", pch = 16, xlab = "X", ylab = "Y", 
+     main = "Trapezoidal Approximation of Area Under the Curve")
+
+# Add trapezoids
+for (i in 1:(length(x) - 1)) {
+  # Draw the trapezoid by connecting consecutive points and the x-axis
+  polygon(c(x[i], x[i], x[i + 1], x[i + 1]), c(0, y[i], y[i + 1], 0), 
+          col = rgb(0.2, 0.7, 0.2, 0.4), border = "darkgreen")
+}
+
+# Re-draw the curve on top of the trapezoids
+lines(x, y, type = "b", col = "blue", pch = 16)
+
+
+
+
+
+# Example data structure (replace this with your actual data)
+# Assume 'participant_id' identifies each participant
+# 'x1', 'x2', 'x3', 'x4' are the x-values, and 'y1', 'y2', 'y3', 'y4' are the y-values
+data <- data.frame(
+  participant_id = 1:33,
+  x1 = runif(33), x2 = runif(33), x3 = runif(33), x4 = runif(33),
+  y1 = runif(33), y2 = runif(33), y3 = runif(33), y4 = runif(33)
+)
+
+data$x1 <- 1
+data$x2 <- 2
+data$x3 <- 3
+data$x4 <- 4
+
+data[,6:9] <- 10
+
+
+
+# Initialize an empty vector to store the AUC values
+auc_values <- numeric(nrow(data))
+
+# Loop through each participant to calculate the AUC
+for (i in 1:nrow(data)) {
+  # Get the x and y values for the current participant
+  x <- c(data$x1[i], data$x2[i], data$x3[i], data$x4[i])
+  y <- c(data$y1[i], data$y2[i], data$y3[i], data$y4[i])
+  
+  # Calculate AUC using the trapz function
+  auc_values[i] <- trapz(x, y)
+  plot(x,y)
+}
+
+# Create a new data frame with participant IDs and their respective AUC values
+auc_table <- data.frame(
+  participant_id = data$participant_id,
+  auc = auc_values
+)
+
+# View the AUC table
+print(auc_table)
+
+
