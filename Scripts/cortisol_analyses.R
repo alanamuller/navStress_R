@@ -452,3 +452,5 @@ auc_table_bc <- auc_table_bc %>%
 
 auc_table_complete_cases <- merge(auc_table, auc_table_bc, by = "subjNum")
 
+# Write combined_data to a new csv file
+write.csv(auc_table_complete_cases, paste0("E:/Nav Stress Data/auc_table.csv"), row.names = FALSE)
