@@ -461,4 +461,33 @@ auc_table_bc <- auc_table_bc %>%
 auc_table_complete_cases <- merge(auc_table, auc_table_bc, by = "subjNum")
 
 # Write combined_data to a new csv file
-write.csv(auc_table_complete_cases, paste0("E:/Nav Stress Data/auc_table.csv"), row.names = FALSE)
+# write.csv(auc_table_complete_cases, paste0("E:/Nav Stress Data/auc_table.csv"), row.names = FALSE)
+
+##### Gender split
+
+# Plot actual cortisol amount with all participant separated by condition, time, gender
+
+summary_table <- all_data %>%
+  group_by(condition, time, gender) %>%
+  summarize(
+    count = n(),
+    mean_cort_log = mean(log_cort), 
+    sd_cort_log = sd(log_cort)
+  )
+
+ggplot(data = summary_table, aes(x=factor(time, level = level_order), y = mean_cort_log, color = condition, group = condition)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 3) +
+  facet_wrap(~gender)
+
+res.aov <- anova_test(data = all_data, dv = log_cort, wid = subjNum, within = c(condition,time), between = gender)
+get_anova_table(res.aov) # 
+
+
+
+
+
+
+
+
+
