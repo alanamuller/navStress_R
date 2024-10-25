@@ -13,11 +13,13 @@ rm(list = ls())
 # Set working directory
 setwd("E:/Nav Stress Data/Salimetrics reports") # from hard drive
 
-# Enter the data 
-samples9Data <- readxl::read_excel("saliva_data_bySubject.xlsx", sheet = "9samples")
+# Enter the data - for now only analyze the complete cases
+#samples9Data <- readxl::read_excel("saliva_data_bySubject.xlsx", sheet = "9samples")
 samples12Data <- readxl::read_excel("saliva_data_bySubject.xlsx", sheet = "12samples")
 
-all_data <- rbind(samples9Data, samples12Data)
+#all_data <- rbind(samples9Data, samples12Data)
+
+all_data <- samples12Data
 
 all_data$cort_nmol_L <- all_data$mean_cort *276 # calculate nmol/L for cortisol
 all_data$log_cort <- log(all_data$cort_nmol_L) # calculate log cortisol using nmol/L
@@ -117,14 +119,14 @@ ggplot(data = all_data, aes(x=factor(time, level = level_order), y=mean_cort)) +
   geom_jitter() +
   stat_summary(fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
   facet_wrap(vars(condition)) +
-  labs(x = "Time", y = "Cortisol (µg/dL)" )
+  labs(x = "Time", y = "Cortisol (nmol/L)" )
 
 # Line plot with Ss's amounts connected
 ggplot(data = all_data, aes(x=factor(time, level = level_order), y=mean_cort)) +
   geom_point() +
   geom_line(aes(group = subjNum)) +
   facet_grid(vars(condition)) +
-  labs(x = "Time", y = "Cortisol (µg/dL)" )
+  labs(x = "Time", y = "Cortisol (nmol/L)" )
 
 # Plot with baseline corrected cort
 ggplot(data = bc_cort, aes(x=factor(time, level = bc_level_order), y=mean_cort)) +
@@ -132,14 +134,14 @@ ggplot(data = bc_cort, aes(x=factor(time, level = bc_level_order), y=mean_cort))
   geom_jitter() +
   stat_summary(fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
   facet_wrap(vars(condition)) +
-  labs(x = "Time", y = "Cortisol (µg/dL)" )
+  labs(x = "Time", y = "Cortisol (nmol/L)" )
 
 # Line plot with Ss's amounts connected
 ggplot(data = bc_cort, aes(x=factor(time, level = bc_level_order), y=mean_cort)) +
   geom_point() +
   geom_line(aes(group = subjNum)) +
   facet_grid(vars(condition)) +
-  labs(x = "Time", y = "Cortisol (µg/dL)" )
+  labs(x = "Time", y = "Cortisol (nmol/L)" )
 
 ########## Checking assumptions
 
@@ -247,7 +249,7 @@ ggqqplot(bc_cort_complete$log_cort)
 
 normality_bc_cort <- bc_cort_complete %>%
   group_by(time) %>%
-  shapiro_test(log_cort)
+  shapiro_test(mean_cort)
 normality_bc_cort
 
 # anova
@@ -329,7 +331,9 @@ lines(x, y, type = "b", col = "blue", pch = 16)
 ##### Actual real data: Subset raw cort data to put it in wide form
 auc_cort <- whole_cort_cpSuccess %>%
   select(subjNum, condition, time, mean_cort)
-  
+auc_cort$condition_time <- paste(auc_cort$condition, auc_cort$time, sep = "_")
+auc_cort <- auc_cort[,-c(2,3)]  
+
 auc_cort_wide <- auc_cort %>%
   pivot_wider(names_from = condition_time, values_from = mean_cort)
 
@@ -365,6 +369,7 @@ auc_table_long <- auc_table %>%
   pivot_longer(!subjNum, names_to = "condition", values_to = "auc")
 
 # One way ANOVA
+hist(auc_table_long$auc)
 hist(log(auc_table_long$auc))
 auc_table_long$auc_log <- log(auc_table_long$auc)
 
@@ -431,11 +436,12 @@ auc_table_long_bc <- auc_table_bc %>%
   pivot_longer(!subjNum, names_to = "condition", values_to = "auc")
 
 # Anova
+hist(auc_table_long_bc$auc)
 hist(log(auc_table_long_bc$auc))
 auc_table_long_bc$auc_log <- log(auc_table_long_bc$auc+1)
 
-res.aov_bc <- aov(auc_log ~ condition, data = auc_table_long_bc)
-summary(res.aov_bc) # sig
+res.aov_bc <- aov(auc ~ condition, data = auc_table_long_bc)
+summary(res.aov_bc) 
 
 # posthoc tests
 TukeyHSD(res.aov_bc)
