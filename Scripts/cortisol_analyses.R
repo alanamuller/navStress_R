@@ -121,14 +121,16 @@ cort_graph1 <- ggplot(data = whole_cort, aes(x=factor(time, level = level_order)
   geom_line(aes(group = subjNum), color = "gray80", alpha = 0.7) +
   facet_wrap(vars(condition), labeller = labeller(condition = cond.labs)) +
   labs(x = "Time", y = " Log Cortisol (nmol/L)" ) +
+  theme_classic() +
+  scale_x_discrete(labels = c("Pre", "Post1", "Post15", "Post30")) +
   theme(axis.text.x = element_text(size = 13), 
         axis.text.y = element_text(size = 17), 
         axis.title.x = element_text(size = 17),
         axis.title.y = element_text(size = 17),
         legend.text = element_text(size = 17),
         legend.title = element_text(size = 17), 
-        strip.text = element_text(size = 13)) +
-  scale_x_discrete(labels = c("Pre", "Post1", "Post15", "Post30"))
+        strip.text = element_text(size = 13),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 1))
 
 #jpeg("E:/Nav Stress Data/dissertation_pics/log_cortisol.jpeg", width = 9, height = 5.75, units = 'in', res = 500)
 cort_graph1
@@ -315,36 +317,32 @@ summary_table <- all_data %>%
 gender_labels <- c("f" = "Women", "m" = "Men")
 condition_labels <- c("cp" = "Cold Pressor", "ctrl" = "Control", "fire" = "Fire Environment")
 
-ggplot(data = summary_table, aes(x=factor(time, level = level_order), y = mean_cort_log, color = condition, group = condition)) +
+cort_graph2 <- ggplot(data = summary_table, aes(x=factor(time, level = level_order), y = mean_cort_log, color = condition, group = condition)) +
   geom_line(size = 1.2) +
   geom_point(size = 3) +
   facet_wrap(~gender, labeller = labeller(gender = gender_labels)) +
   labs(x = "Time", y = " Log Cortisol (nmol/L)", color = "condition") +
+  theme_classic() +
   theme(axis.text.x = element_text(size = 13), 
         axis.text.y = element_text(size = 17), 
         axis.title.x = element_text(size = 17),
         axis.title.y = element_text(size = 17),
-        legend.text = element_text(size = 17),
-        legend.title = element_text(size = 17), 
-        strip.text = element_text(size = 13)) +
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 15), 
+        strip.text = element_text(size = 13),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 1)) +
   scale_x_discrete(labels = c("Pre", "Post1", "Post15", "Post30")) +
-  scale_color_manual(labels = condition_labels, values = c("cp" = "deep sky blue", "ctrl" = "lime green", "fire" = "salmon"))
+  scale_color_manual(name = "Condition", labels = condition_labels, values = c("cp" = "deep sky blue", "ctrl" = "lime green", "fire" = "salmon"))
   
+jpeg("E:/Nav Stress Data/dissertation_pics/log_cortisol_gender.jpeg", width = 9, height = 5.75, units = 'in', res = 500)
+cort_graph2
+dev.off()
 
 res.aov <- anova_test(data = all_data, dv = log_cort, wid = subjNum, within = c(condition,time), between = gender)
 get_anova_table(res.aov) # time and condition:time sig
 
-cort_graph2 <- ggplot(data = summary_table, aes(x=factor(time, level = level_order), y=log_cort)) +
-  geom_boxplot(outliers = FALSE) +
-  geom_point(color = "gray60") +
-  stat_summary(fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
-  geom_line(aes(group = subjNum), color = "gray80", alpha = 0.7) +
-  facet_wrap(vars(condition), labeller = labeller(condition = cond.labs)) +
-  labs(x = "Time", y = " Log Cortisol (nmol/L)" )
 
-#jpeg("E:/Nav Stress Data/dissertation_pics/log_cortisol.jpeg", width = 9, height = 5.75, units = 'in', res = 500)
-cort_graph2
-#dev.off()
+
 
 
 
