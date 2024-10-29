@@ -33,6 +33,13 @@ wide_data$bc_post1 <- wide_data$post1 - wide_data$pre
 wide_data$bc_post15 <- wide_data$post15 - wide_data$pre
 wide_data$bc_post30 <- wide_data$post30 - wide_data$pre
 
+# Write this cort data to a table - it could be useful later
+mean_cort_table <- wide_data %>%
+  separate(num_cond, into = c("subjNum", "condition"), sep = "_")
+
+# Write table to csv
+#write.csv(mean_cort_table, paste0("E:/Nav Stress Data/mean_cort_table_nmol_L.csv"), row.names = FALSE)
+
 # Make a long version of the data
 long_data <- pivot_longer(data = wide_data, cols = !c(num_cond,gender), names_to = "time", values_to = "mean_cort")
 
@@ -410,9 +417,57 @@ AUC_graph <- ggplot(auc_table_long, aes(x = condition, y = auc_log, fill = gende
   scale_x_discrete(labels = c("SECPT", "Control", "Fire")) +
   scale_fill_manual(name = "Gender", labels = c("Women", "Men"), values = c("sienna1", "steelblue2"))
 
-jpeg("E:/Nav Stress Data/dissertation/pics/AUC_gender.jpeg", width = 7, height = 5.75, units = 'in', res = 500)
+#jpeg("E:/Nav Stress Data/dissertation/pics/AUC_gender.jpeg", width = 7, height = 5.75, units = 'in', res = 500)
 AUC_graph
-dev.off()
+#dev.off()
 
+# Write table to csv
+#write.csv(auc_table_complete_cases, paste0("E:/Nav Stress Data/auc_table.csv"), row.names = FALSE)
 
+##### Now do the same for the baseline corrected data
 
+##### Actual real data: Subset baseline corrected cort data to put it in wide form
+auc_cort_bc <- bc_cort %>%
+select(subjNum, gender, condition, time, mean_cort)
+
+# Join condition and time column together
+auc_cort_bc$condition_time <- paste(auc_cort_bc$condition, auc_cort_bc$time, sep = "_")
+auc_cort_bc <- subset(auc_cort_bc, select = -c(condition, time)) # delete columns condition and time
+
+auc_cort_bc_wide <- auc_cort_bc %>%
+pivot_wider(names_from = condition_time, values_from = mean_cort)
+
+# Initialize an empty vector to store the AUC values
+auc_values_ctrl_bc <- numeric(nrow(auc_cort_bc_wide))
+auc_values_cp_bc <- numeric(nrow(auc_cort_bc_wide))
+auc_values_fire_bc <- numeric(nrow(auc_cort_bc_wide))
+
+# Loop through each participant and condition to calculate the AUC
+
+for (i in 1:nrow(auc_cort_bc_wide)) {
+  # Get the x and y values for the current participant and condition
+  x <- c(1, 2, 3)
+  y <- c(auc_cort_bc_wide$ctrl_bc_post1[i], auc_cort_bc_wide$ctrl_bc_post15[i], auc_cort_bc_wide$ctrl_bc_post30[i])
+  y1 <- c(auc_cort_bc_wide$cp_bc_post1[i], auc_cort_bc_wide$cp_bc_post15[i], auc_cort_bc_wide$cp_bc_post30[i])
+  y2 <- c(auc_cort_bc_wide$fire_bc_post1[i], auc_cort_bc_wide$fire_bc_post15[i], auc_cort_bc_wide$fire_bc_post30[i])
+
+  # Calculate AUC using the trapz function
+  auc_values_ctrl_bc[i] <- trapz(x, y)
+  auc_values_cp_bc[i] <- trapz(x,y1)
+  auc_values_fire_bc[i] <- trapz(x,y2)
+}
+
+# Create a new data frame with participant IDs, conditions, and their respective AUC values
+auc_table_bc <- data.frame(
+  subjNum = auc_cort_bc_wide$subjNum,
+  ctrl = auc_values_ctrl_bc, 
+  cp = auc_values_cp_bc,
+  fire = auc_values_fire_bc
+)
+
+# Make table long
+auc_table_long_bc <- auc_table_bc %>%
+pivot_longer(!subjNum, names_to = "condition", values_to = "auc_bc")
+
+# Write table to csv
+write.csv(auc_table_long_bc, paste0("E:/Nav Stress Data/auc_bc_table.csv"), row.names = FALSE)
