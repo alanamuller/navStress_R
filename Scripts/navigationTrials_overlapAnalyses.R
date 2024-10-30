@@ -30,6 +30,8 @@ navTrialsData <- originalData # work with this copy of the data
 sotData <- read.xlsx("SOT_data.xlsx") # read in the SOT data
 
 good_bad_nav_labels <- read.csv("good_bad_nav_labels.csv") # read in the bad, good, and great navigator labels
+auc_data <- read.csv("auc_table.csv") # read in completed cases for area under the curve cortisol data
+auc_bc_data <- read.csv("auc")
 
 # make the correct variables factors
 navTrialsData$subjectID <- as.factor(navTrialsData$subjectID)

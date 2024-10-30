@@ -6,6 +6,7 @@ library(magrittr)
 library(dplyr)
 library(tidyr)
 library(pracma)
+library(plotrix)
 
 # Start fresh by removing everything from the environment
 rm(list = ls())
@@ -54,7 +55,6 @@ bc_cort <- long_data %>%
   filter(time == "bc_post1" | time == "bc_post15" | time == "bc_post30")
 bc_cort <- bc_cort %>%
   separate_wider_delim(num_cond, delim = "_", names = c("subjNum", "condition"))
-bc_cort$log_cort <- log(bc_cort$mean_cort)
 
 # Set the order of the x-axis
 level_order <- c('pre', 'post1', 'post15', 'post30')
@@ -76,6 +76,15 @@ normality_allData <- all_data %>%
   group_by(time) %>%
   shapiro_test(log_cort)
 normality_allData # all still sig but better
+
+
+# summary table - 24 people in sample
+log_cort_table <- whole_cort %>%
+  group_by(condition, time) %>%
+  summarize(
+    count = n(),
+    log_cort = mean(log_cort)
+  )
 
 # anova
 res.aov <- anova_test(data = whole_cort, dv = log_cort, wid = subjNum, within = c(condition,time))
@@ -119,6 +128,29 @@ pwc2 # cp, (post1 vs post15), (post15 vs post 30), (post15 vs pre), (post30 vs p
 # Make a plot
 cond.labs <- c("Cold Pressor", "Control", "Fire Environment")
 names(cond.labs) <- c("cp", "ctrl", "fire")
+
+# Plot with all participant separated by condition and time
+cort_graph1 <- ggplot(data = whole_cort, aes(x=factor(time, level = level_order), y=log_cort)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_point(color = "gray60") +
+  stat_summary(fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
+  geom_line(aes(group = subjNum), color = "gray80", alpha = 0.7) +
+  facet_wrap(vars(condition), labeller = labeller(condition = cond.labs)) +
+  labs(x = "Time", y = " Log Cortisol (nmol/L)" ) +
+  theme_classic() +
+  scale_x_discrete(labels = c("Pre", "Post1", "Post15", "Post30")) +
+  theme(axis.text.x = element_text(size = 13), 
+        axis.text.y = element_text(size = 17), 
+        axis.title.x = element_text(size = 17),
+        axis.title.y = element_text(size = 17),
+        legend.text = element_text(size = 17),
+        legend.title = element_text(size = 17), 
+        strip.text = element_text(size = 13),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 1))
+
+#jpeg("E:/Nav Stress Data/dissertation/pics/log_cortisol_allData.jpeg", width = 9, height = 5.75, units = 'in', res = 500)
+cort_graph1
+#dev.off()
 
 # Plot with all participant separated by condition and time
 cort_graph1 <- ggplot(data = whole_cort, aes(x=factor(time, level = level_order), y=log_cort)) +
@@ -250,6 +282,30 @@ cort_graph_complete <- ggplot(data = bad_cp_data, aes(x=factor(time, level = lev
 cort_graph_complete
 #dev.off()
 
+# Plot with all participant separated by condition, time, and gender
+cort_graph_gender <- ggplot(data = whole_cort, aes(x=factor(time, level = level_order), y=log_cort, fill = gender)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_point(color = "gray60") +
+  stat_summary(fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
+  geom_line(aes(group = subjNum), color = "gray80", alpha = 0.7) +
+  facet_wrap(vars(condition), labeller = labeller(condition = cond.labs)) +
+  labs(x = "Time", y = " Log Cortisol (nmol/L)" ) +
+  theme_classic() +
+  scale_x_discrete(labels = c("Pre", "Post1", "Post15", "Post30")) +
+  theme(axis.text.x = element_text(size = 13), 
+        axis.text.y = element_text(size = 17), 
+        axis.title.x = element_text(size = 17),
+        axis.title.y = element_text(size = 17),
+        legend.text = element_text(size = 14),
+        legend.title = element_text(size = 15), 
+        strip.text = element_text(size = 13),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 1)) +
+  scale_fill_manual(name = "Gender", labels = c("Women", "Men"), values = c("sienna1", "steelblue2"))
+
+jpeg("E:/Nav Stress Data/dissertation/pics/log_cortisol_allData_gender.jpeg", width = 10, height = 5.75, units = 'in', res = 500)
+cort_graph_gender
+dev.off()
+
 ########## Now split by gender
 
 summary_table <- good_cp_data %>%
@@ -257,7 +313,8 @@ summary_table <- good_cp_data %>%
   summarize(
     count = n(),
     mean_cort_log = mean(log_cort), 
-    sd_cort_log = sd(log_cort)
+    sd_cort_log = sd(log_cort), 
+    se_cort_log = std.error(log_cort)
   )
 
 # Plot
@@ -267,6 +324,7 @@ condition_labels <- c("cp" = "Cold Pressor", "ctrl" = "Control", "fire" = "Fire 
 cort_graph2 <- ggplot(data = summary_table, aes(x=factor(time, level = level_order), y = mean_cort_log, color = condition, group = condition)) +
   geom_line(size = 1.2) +
   geom_point(size = 3) +
+  geom_errorbar(aes(ymin = mean_cort_log - se_cort_log, ymax = mean_cort_log + se_cort_log), width = 0.2, size = 0.8) +
   facet_wrap(~gender, labeller = labeller(gender = gender_labels)) +
   labs(x = "Time", y = " Log Cortisol (nmol/L)", color = "condition") +
   theme_classic() +
@@ -422,7 +480,7 @@ AUC_graph
 #dev.off()
 
 # Write table to csv
-#write.csv(auc_table_complete_cases, paste0("E:/Nav Stress Data/auc_table.csv"), row.names = FALSE)
+write.csv(auc_table_long, paste0("E:/Nav Stress Data/auc_data.csv"), row.names = FALSE)
 
 ##### Now do the same for the baseline corrected data
 
@@ -469,5 +527,8 @@ auc_table_bc <- data.frame(
 auc_table_long_bc <- auc_table_bc %>%
 pivot_longer(!subjNum, names_to = "condition", values_to = "auc_bc")
 
+# Merge auc_table with auc_bc values
+auc_data <- merge()
+
 # Write table to csv
-write.csv(auc_table_long_bc, paste0("E:/Nav Stress Data/auc_bc_table.csv"), row.names = FALSE)
+write.csv(auc_table_long_bc, paste0("E:/Nav Stress Data/auc_bc_data.csv"), row.names = FALSE)
