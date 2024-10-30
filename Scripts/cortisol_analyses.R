@@ -302,9 +302,9 @@ cort_graph_gender <- ggplot(data = whole_cort, aes(x=factor(time, level = level_
         panel.border = element_rect(color = "black", fill = NA, linewidth = 1)) +
   scale_fill_manual(name = "Gender", labels = c("Women", "Men"), values = c("sienna1", "steelblue2"))
 
-jpeg("E:/Nav Stress Data/dissertation/pics/log_cortisol_allData_gender.jpeg", width = 10, height = 5.75, units = 'in', res = 500)
+#jpeg("E:/Nav Stress Data/dissertation/pics/log_cortisol_allData_gender.jpeg", width = 10, height = 5.75, units = 'in', res = 500)
 cort_graph_gender
-dev.off()
+#dev.off()
 
 ########## Now split by gender
 
@@ -420,11 +420,6 @@ auc_table <- data.frame(
   fire = auc_values_fire
 )
 
-# Get rid of people who didn't complete cp task
-auc_table <- auc_table %>%
-  filter(!subjNum %in% bad_cp)
-
-
 # Make table long
 auc_table_long <- auc_table %>%
   pivot_longer(!c(subjNum, gender), names_to = "condition", values_to = "auc")
@@ -480,7 +475,7 @@ AUC_graph
 #dev.off()
 
 # Write table to csv
-write.csv(auc_table_long, paste0("E:/Nav Stress Data/auc_data.csv"), row.names = FALSE)
+#write.csv(auc_table_long, paste0("E:/Nav Stress Data/auc_data.csv"), row.names = FALSE)
 
 ##### Now do the same for the baseline corrected data
 
@@ -518,17 +513,24 @@ for (i in 1:nrow(auc_cort_bc_wide)) {
 # Create a new data frame with participant IDs, conditions, and their respective AUC values
 auc_table_bc <- data.frame(
   subjNum = auc_cort_bc_wide$subjNum,
-  ctrl = auc_values_ctrl_bc, 
-  cp = auc_values_cp_bc,
-  fire = auc_values_fire_bc
+  ctrl_bc = auc_values_ctrl_bc, 
+  cp_bc = auc_values_cp_bc,
+  fire_bc = auc_values_fire_bc
 )
 
 # Make table long
 auc_table_long_bc <- auc_table_bc %>%
 pivot_longer(!subjNum, names_to = "condition", values_to = "auc_bc")
+# Remove "_bc" from the end of condition names
+auc_table_long_bc$condition <- sub("_bc$", "", auc_table_long_bc$condition)
+
 
 # Merge auc_table with auc_bc values
-auc_data <- merge()
+auc_data <- merge(auc_table, auc_table_bc, by = "subjNum")
 
-# Write table to csv
-write.csv(auc_table_long_bc, paste0("E:/Nav Stress Data/auc_bc_data.csv"), row.names = FALSE)
+auc_data_long <- merge(auc_table_long, auc_table_long_bc, by = c("subjNum", "condition"))
+
+# Write tables to csv
+write.csv(auc_data, paste0("E:/Nav Stress Data/auc_data.csv"), row.names = FALSE)
+write.csv(auc_data_long, paste0("E:/Nav Stress Data/auc_long_data.csv"), row.names = FALSE)
+
