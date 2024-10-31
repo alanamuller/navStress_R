@@ -28,10 +28,14 @@ originalData <- read.csv("combined_navTrialsLogData.csv") # keep a copy of origi
 navTrialsData <- originalData # work with this copy of the data
 
 sotData <- read.xlsx("SOT_data.xlsx") # read in the SOT data
+sbsod_stress_surveys <- read.csv("sbsod_perceivedStress_scored.csv") # read in the SBSOD scores and perceived stress scores
 
 good_bad_nav_labels <- read.csv("good_bad_nav_labels.csv") # read in the bad, good, and great navigator labels
-auc_data <- read.csv("auc_table.csv") # read in completed cases for area under the curve cortisol data
-auc_bc_data <- read.csv("auc")
+auc_data <- read.csv("auc_data.csv") # read in completed cases for area under the curve cortisol data
+auc_data_long <- read.csv("auc_long_data.csv") # read in long version of auc table
+
+demographic_data <- read_excel("NavStressDemographics.xlsx") # read in demographics
+excess_path_data <- read.csv("avgExcessPathSubj.csv") # read in excess path for each participant
 
 # make the correct variables factors
 navTrialsData$subjectID <- as.factor(navTrialsData$subjectID)
@@ -118,14 +122,35 @@ upperGridRange <- meanGrid + (2.5*SDGrid)
 NO_nav_summary <- subset(nav_summary, mean_grid_number < upperGridRange) # 19 outliers
 
 # graph for iNAV
-wrap_labels <- c("Inner More Familiar", "Outer More Familiar")
-names(wrap_labels) <- c("inner", "outer")
+
 tick_labels <- c("Novel Grids", "Outer Grids", "Inner Grids")
 
 navTrialsMean <- ggplot(NO_nav_summary, aes(x = grid_type, y = mean_grid_number, fill = condition)) + 
   geom_boxplot(outliers = FALSE) + geom_jitter(position = position_jitterdodge()) +
   stat_summary(aes(group = condition), fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
   labs(x = "Grid Type", y = "Mean Grid Number", fill = "Condition") +
+  theme_classic() +
+  scale_x_discrete(labels = tick_labels) + 
+  scale_fill_discrete(name = "Condition", labels = c("Cold Pressor", "Control", "Fire Environment"), type = c("deep sky blue", "lime green", "salmon")) +
+  theme(axis.text.x = element_text(size = 13), 
+        axis.text.y = element_text(size = 17), 
+        axis.title.x = element_text(size = 17),
+        axis.title.y = element_text(size = 17),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 13), 
+        strip.text = element_text(size = 13))
+#jpeg("E:/Nav Stress Data/dissertation/pics/navTrialsMean.jpeg", width = 8, height = 5.75, units = 'in', res = 500)
+navTrialsMean
+#dev.off()
+
+wrap_labels <- c("Inner More Familiar", "Outer More Familiar")
+names(wrap_labels) <- c("inner", "outer")
+
+navTrialsMean <- ggplot(NO_nav_summary, aes(x = grid_type, y = mean_grid_number, fill = condition)) + 
+  geom_boxplot(outliers = FALSE) + geom_jitter(position = position_jitterdodge()) +
+  stat_summary(aes(group = condition), fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
+  labs(x = "Grid Type", y = "Mean Grid Number", fill = "Condition") +
+  theme_classic() +
   scale_x_discrete(labels = tick_labels) + 
   scale_fill_discrete(name = "Condition", labels = c("Cold Pressor", "Control", "Fire Environment"), type = c("deep sky blue", "lime green", "salmon")) +
   facet_wrap(vars(moreFamiliarPath), labeller = labeller(moreFamiliarPath = wrap_labels)) +
@@ -135,10 +160,36 @@ navTrialsMean <- ggplot(NO_nav_summary, aes(x = grid_type, y = mean_grid_number,
         axis.title.y = element_text(size = 17),
         legend.text = element_text(size = 12),
         legend.title = element_text(size = 13), 
-        strip.text = element_text(size = 13))
-#jpeg("C:/Users/amuller/Desktop/Alana/UA/HSCL/Conferences/iNAV 2024/pics/navTrialsMedian.jpeg", width = 10, height = 5.75, units = 'in', res = 500)
+        strip.text = element_text(size = 13),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 1))
+#jpeg("E:/Nav Stress Data/dissertation/pics/navTrialsMean_byFamiliar.jpeg", width = 10, height = 5.75, units = 'in', res = 500)
 navTrialsMean
 #dev.off()
+
+
+# rep measures mixed ANOVA - needs fixing to account for moreFamiliarPath
+
+# normality check
+normality_each_cond <- NO_nav_summary %>%
+  group_by(condition, grid_type) %>%
+  shapiro_test(mean_grid_number)
+normality_each_cond # 3 non sig but overall, really not bad
+
+NO_nav_summary %>%
+  group_by(grid_type) %>%
+  levene_test(mean_grid_number ~ condition) # good homogeneity of variance
+
+NO_nav_summary <- as.data.frame(NO_nav_summary)
+                                
+res.aov <- anova_test(data = NO_nav_summary, dv = mean_grid_number, wid = subjectID, 
+                      within = c(condition, grid_type))
+get_anova_table(res.aov) # grid type is sig
+
+# Try a linear mixed effects model
+basic.lm <- lm(mean_grid_number ~ condition*grid_type, data = NO_nav_summary)
+summary(basic.lm)
+
+
 
 # graph for variance for iNAV
 wrap_labels <- c("Inner More Familiar", "Outer More Familiar")
@@ -159,7 +210,7 @@ navTrialsSD <- ggplot(NO_nav_summary, aes(x = grid_type, y = sd_grid_number, fil
         legend.text = element_text(size = 12),
         legend.title = element_text(size = 13), 
         strip.text = element_text(size = 13))
-#jpeg("C:/Users/amuller/Desktop/Alana/UA/HSCL/Conferences/iNAV 2024/pics/navTrialsIQR.jpeg", width = 10, height = 5.75, units = 'in', res = 500)
+#jpeg("E:/Nav Stress Data/dissertation/pics/navTrialsIQR.jpeg", width = 10, height = 5.75, units = 'in', res = 500)
 navTrialsSD
 #dev.off()
 
@@ -185,7 +236,7 @@ badNavs <- ggplot(bad_navs, aes(x = grid_type, y = mean_grid_number, fill = cond
         legend.text = element_text(size = 12),
         legend.title = element_text(size = 13), 
         strip.text = element_text(size = 13))
-#jpeg("C:/Users/amuller/Desktop/Alana/UA/HSCL/Conferences/iNAV 2024/pics/navTrialsMedian.jpeg", width = 10, height = 5.75, units = 'in', res = 500)
+#jpeg("E:/Nav Stress Data/dissertation/pics/navTrialsMedian.jpeg", width = 10, height = 5.75, units = 'in', res = 500)
 badNavs
 #dev.off()
 
@@ -215,10 +266,9 @@ goodNavs <- ggplot(good_navs, aes(x = grid_type, y = mean_grid_number, fill = co
         legend.text = element_text(size = 12),
         legend.title = element_text(size = 13), 
         strip.text = element_text(size = 13))
-#jpeg("C:/Users/amuller/Desktop/Alana/UA/HSCL/Conferences/iNAV 2024/pics/navTrialsMedian.jpeg", width = 10, height = 5.75, units = 'in', res = 500)
+#jpeg("E:/Nav Stress Data/dissertation/pics/navTrialsMedian.jpeg", width = 10, height = 5.75, units = 'in', res = 500)
 goodNavs
 #dev.off()
-
 
 
 # check normality
@@ -231,7 +281,7 @@ n <- art(mean_grid_number ~ condition*grid_type*moreFamiliarPath + Error(conditi
 summary(n) # still may not be appropriate
 anova(n) # lots of sig
 
-# try regular anova - same as ARTool
+# try regular anova - same as ARTool mostly
 res.aov <- aov(mean_grid_number ~ condition*grid_type*moreFamiliarPath, data = NO_nav_summary)
 summary(res.aov)
 
@@ -321,7 +371,7 @@ navPlot <- ggplot(NO_nav_summary2, aes(x = grid_type, y = mean_grid_number, fill
         legend.text = element_text(size = 12),
         legend.title = element_text(size = 13), 
         strip.text = element_text(size = 13))
-#jpeg("C:/Users/amuller/Desktop/Alana/UA/HSCL/Conferences/iNAV 2024/pics/navMoreLessFam.jpeg", width = 9.5, height = 5.75, units = 'in', res = 500)
+#jpeg("E:/Nav Stress Data/dissertation/pics/navMoreLessFam.jpeg", width = 9.5, height = 5.75, units = 'in', res = 500)
 navPlot
 #dev.off()
   
@@ -391,7 +441,7 @@ sd_SOT <- sd(optimal_lost_subj_SOT$SOT_average_angular_error)
 optimal_lost_subj_SOT <- subset(optimal_lost_subj_SOT, SOT_average_angular_error < mean_SOT + (2.5*sd_SOT))
 
 plot(optimal_lost_subj_SOT$optimal_nav_count, optimal_lost_subj_SOT$SOT_average_angular_error)
-cor.test(optimal_lost_subj_SOT$optimal_nav_count, optimal_lost_subj_SOT$SOT_average_angular_error) # not sig, p = .064
+cor.test(optimal_lost_subj_SOT$optimal_nav_count, optimal_lost_subj_SOT$SOT_average_angular_error) # sig, p = .0288
 
 plot(optimal_lost_subj_SOT$lost_trials_count, optimal_lost_subj_SOT$SOT_average_angular_error)
 cor.test(optimal_lost_subj_SOT$lost_trials_count, optimal_lost_subj_SOT$SOT_average_angular_error) # dumb but sig
@@ -405,7 +455,7 @@ sp <- ggscatter(optimal_lost_subj_SOT, x = "lost_trials_count", y = "SOT_average
                 ylab = "SOT Avg Angular Error") + 
   stat_cor(method = "pearson", label.x = 7, label.y = 15)
 
-#jpeg("C:/Users/amuller/Desktop/Alana/UA/HSCL/Conferences/iNAV 2024/pics/sotLostCorr.jpeg", width = 4, height = 5, units = 'in', res = 500)
+#jpeg("E:/Nav Stress Data/dissertation/pics/sotLostCorr.jpeg", width = 4, height = 5, units = 'in', res = 500)
 sp
 #dev.off()
 
@@ -418,11 +468,9 @@ sp <- ggscatter(optimal_lost_subj_SOT, x = "lost_trials_count", y = "SOT_stdev",
                 ylab = "SOT SD") + 
   stat_cor(method = "pearson", label.x = 7, label.y = 15)
 
-#jpeg("C:/Users/amuller/Desktop/Alana/UA/HSCL/Conferences/iNAV 2024/pics/sotLostCorr.jpeg", width = 4, height = 5, units = 'in', res = 500)
+#jpeg("E:/Nav Stress Data/dissertation/pics/sotLostCorr.jpeg", width = 4, height = 5, units = 'in', res = 500)
 sp
 #dev.off()
-
-plot(sotData$SOT_average_angular_error, sotData$SOT_stdev) # error and SD seem to be pretty highly correlated
 
 sp <- ggscatter(sotData, x = "SOT_average_angular_error", y = "SOT_stdev", 
                 add = "reg.line", 
@@ -432,7 +480,7 @@ sp <- ggscatter(sotData, x = "SOT_average_angular_error", y = "SOT_stdev",
                 ylab = "SOT SD") + 
   stat_cor(method = "pearson", label.x = 60, label.y = 15)
 
-#jpeg("C:/Users/amuller/Desktop/Alana/UA/HSCL/Conferences/iNAV 2024/pics/sotLostCorr.jpeg", width = 4, height = 5, units = 'in', res = 500)
+#jpeg("E:/Nav Stress Data/dissertation/pics/sotLostCorr.jpeg", width = 4, height = 5, units = 'in', res = 500)
 sp
 #dev.off()
 
@@ -477,25 +525,61 @@ upperGridRange <- meanGrid + (2.5*sdGrid)
 
 trial_type_summary <- subset(trial_type_summary, mean_grid_number < upperGridRange)
 
+
+
+
+
+
+
+
+
+wrap_labels <- c("Inner More Familiar", "Outer More Familiar")
+names(wrap_labels) <- c("inner", "outer")
+
+navTrialsMean <- ggplot(NO_nav_summary, aes(x = grid_type, y = mean_grid_number, fill = condition)) + 
+  geom_boxplot(outliers = FALSE) + geom_jitter(position = position_jitterdodge()) +
+  stat_summary(aes(group = condition), fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
+  labs(x = "Grid Type", y = "Mean Grid Number", fill = "Condition") +
+  theme_classic() +
+  scale_x_discrete(labels = tick_labels) + 
+  scale_fill_discrete(name = "Condition", labels = c("Cold Pressor", "Control", "Fire Environment"), type = c("deep sky blue", "lime green", "salmon")) +
+  facet_wrap(vars(moreFamiliarPath), labeller = labeller(moreFamiliarPath = wrap_labels))
+
+
+
+
+
+
+
+
+
+
+
+
+wrap_labels <- c("Novel Grids Used", "Outer Grids Used", "Inner Grids Used")
+names(wrap_labels) <- c("novel_grids", "total_outer_use", "total_inner_use")
+
 # graph for iNAV
-trialType <- ggplot(trial_type_summary, aes(x = trial_type, y = mean_grid_number, fill = grid_type)) + 
+trialType <- ggplot(trial_type_summary, aes(x = trial_type, y = mean_grid_number, fill = condition)) + 
   geom_boxplot(outliers = FALSE) +
   geom_jitter(position = position_jitterdodge()) +
-  stat_summary(aes(group = grid_type), fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
-  labs(x = "Trial Type", y = "Mean Grid Number", fill = "Grid Type") +
-  scale_fill_discrete(name = "Condition") +
-  facet_wrap(vars(condition)) +
+  stat_summary(aes(group = condition), fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
+  scale_fill_discrete(name = "Condition", labels = c("Cold Pressor", "Control", "Fire Environment"), type = c("deep sky blue", "lime green", "salmon")) +
+  labs(x = "Trial Type", y = "Mean Grid Number") +
+  theme_classic() +
+  facet_wrap(vars(grid_type), labeller = labeller(grid_type = wrap_labels)) +
   theme(axis.text.x = element_text(size = 13), 
         axis.text.y = element_text(size = 17), 
         axis.title.x = element_text(size = 17),
         axis.title.y = element_text(size = 17),
         legend.text = element_text(size = 12),
         legend.title = element_text(size = 13), 
-        strip.text = element_text(size = 13)) +
+        strip.text = element_text(size = 13),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 1)) +
   scale_x_discrete(labels = c("Backward", "Diagonal", "Forward"))
-#jpeg("C:/Users/amuller/Desktop/Alana/UA/HSCL/Conferences/iNAV 2024/pics/trialType.jpeg", width = 8, height = 5.75, units = 'in', res = 500)
+jpeg("E:/Nav Stress Data/dissertation/pics/trialType.jpeg", width = 12, height = 5.75, units = 'in', res = 500)
 trialType
-#dev.off()
+dev.off()
 
 # stats for this figure
 nav_lm <- lmer(mean_grid_number ~ condition + (1 | subjectID), data = trial_type_summary)
@@ -529,18 +613,6 @@ pwc
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 ######### excess path analysis
 
 # Excess path analyses
@@ -556,7 +628,7 @@ excessPathSummary <- longNav2 %>%
 
 excessPathPlot <- ggplot(excessPathSummary, aes(x = condition, y = mean_excess_path, fill = block)) + 
   geom_boxplot(outliers = FALSE) +
-  geom_jitter(position = position_jitterdodge()) +
+  geom_jitter(position = position_jitterdodge(), color = "gray40") +
   labs(x = "Condition", y = "Mean Excess Path", fill = "Block") +
   theme(axis.text.x = element_text(size = 13), 
         axis.text.y = element_text(size = 17), 
@@ -571,16 +643,29 @@ excessPathPlot
 dev.off()
 
 avgExcessPathSubj <- longNav2 %>%
-  group_by(subjectID) %>%
+  group_by(subjectID, condition) %>%
   summarise(
+    count = n(),
     mean_excessPath = mean(Navigate_excessPath),
     sd_excessPath = sd(Navigate_excessPath)
   )
 
 # Write bigMergeData to a new csv file
-#write.csv(avgExcessPathSubj, "E:/Nav Stress Data/surveys/avgExcessPathSubj.csv", row.names = FALSE)
+#write.csv(avgExcessPathSubj, "E:/Nav Stress Data/avgExcessPathSubj.csv", row.names = FALSE)
 
 
+##### Correlations with cortisol and excess path
+# make one big data sheet
+test_bigData <- merge(auc_data, excess_path_data, by.x = 1, by.y = 1, all.x = TRUE, all.y = TRUE)
+
+
+# baseline cort and excess path
+plot(excess_path_data$mean_excessPath, auc_data$ctrl)
+
+# AUC and excess path
+
+
+# AUC bc and excess path
 
 
 

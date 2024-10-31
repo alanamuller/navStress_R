@@ -531,6 +531,6 @@ auc_data <- merge(auc_table, auc_table_bc, by = "subjNum")
 auc_data_long <- merge(auc_table_long, auc_table_long_bc, by = c("subjNum", "condition"))
 
 # Write tables to csv
-write.csv(auc_data, paste0("E:/Nav Stress Data/auc_data.csv"), row.names = FALSE)
-write.csv(auc_data_long, paste0("E:/Nav Stress Data/auc_long_data.csv"), row.names = FALSE)
+#write.csv(auc_data, paste0("E:/Nav Stress Data/auc_data.csv"), row.names = FALSE)
+#write.csv(auc_data_long, paste0("E:/Nav Stress Data/auc_long_data.csv"), row.names = FALSE)
 

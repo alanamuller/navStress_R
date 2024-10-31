@@ -1,4 +1,4 @@
-# Script to separate and score Santa Barbara Sense of Direction Scale and Perceive Stress Survey
+# Script to separate and score Santa Barbara Sense of Direction Scale and Perceived Stress Survey
 
 # participants 4, 16, and 22
 
@@ -12,7 +12,6 @@ library(rstatix)
 rm(list = ls())
 
 # Set working directory and file name
-# setwd("C:/Users/deepa/Downloads")
 setwd("E:/Nav Stress Data/surveys")
 
 # import the data
@@ -98,4 +97,4 @@ perceivedStress_rev$perceivedStress_totalScore <- rowSums(perceivedStress_rev[,-
 sbsod_perceviedStress_scored <- merge(sbsod_rev, perceivedStress_rev, by = "Participant.ID") 
 
 # Write data to a new csv file
-write.csv(sbsod_perceviedStress_scored, paste0("E:/Nav Stress Data/surveys/sbsod_perceviedStress_scored.csv"), row.names = FALSE)
+write.csv(sbsod_perceviedStress_scored, paste0("E:/Nav Stress Data/sbsod_perceivedStress_scored.csv"), row.names = FALSE)
