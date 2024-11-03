@@ -33,6 +33,7 @@ sbsod_stress_surveys <- read.csv("sbsod_perceivedStress_scored.csv") # read in t
 good_bad_nav_labels <- read.csv("good_bad_nav_labels.csv") # read in the bad, good, and great navigator labels
 auc_data <- read.csv("auc_data.csv") # read in completed cases for area under the curve cortisol data
 auc_data_long <- read.csv("auc_long_data.csv") # read in long version of auc table
+cort_data <- read.csv("mean_cort_table_nmol_L.csv")
 
 demographic_data <- read_excel("NavStressDemographics.xlsx") # read in demographics
 excess_path_data <- read.csv("avgExcessPathSubj.csv") # read in excess path for each participant
@@ -184,6 +185,41 @@ NO_nav_summary <- as.data.frame(NO_nav_summary)
 res.aov <- anova_test(data = NO_nav_summary, dv = mean_grid_number, wid = subjectID, 
                       within = c(condition, grid_type))
 get_anova_table(res.aov) # grid type is sig
+
+# testing simple main effects
+one.way <- NO_nav_summary %>%
+  group_by(grid_type) %>%
+  anova_test(dv = mean_grid_number, wid = subjectID, within = condition) %>%
+  get_anova_table() %>%
+  adjust_pvalue(method = "bonferroni")
+one.way
+
+NO_nav_summary %>%
+
+# equal cases so pairing it will work
+pwc <- NO_nav_summary %>%
+  group_by(grid_type) %>%
+  pairwise_t_test(
+    mean_grid_number ~ condition, paired =  TRUE,
+    p.adjust.method = "bonferroni"
+  )
+pwc # cp and fire are sig diff at post15 and post30, nothing else
+
+one.way2 <- NO_nav_summary %>%
+  group_by(condition) %>%
+  anova_test(dv = mean_grid_number, wid = subjectID, within = time) %>%
+  get_anova_table() %>%
+  adjust_pvalue(method = "bonferroni")
+one.way2 # cp is sig
+
+# equal cases so pairing it will work
+pwc2 <- NO_nav_summary %>%
+  group_by(condition) %>%
+  pairwise_t_test(
+    mean_grid_number ~ time, paired = TRUE,
+    p.adjust.method = "bonferroni"
+  )
+pwc2
 
 # Try a linear mixed effects model
 basic.lm <- lm(mean_grid_number ~ condition*grid_type, data = NO_nav_summary)
@@ -426,11 +462,25 @@ optimal_by_condition <- navTrialsData %>%
     lost_trials_count = sum(grid_count > mean_gridCount+(2.5*sd_gridCount))
   )
 
-ggplot(optimal_by_condition, aes(x = condition, y = optimal_nav_count)) + 
+# Plot for number of optimal trials by condition
+optimal_trials <- ggplot(optimal_by_condition, aes(x = condition, y = optimal_nav_count)) + 
   geom_boxplot(outliers = FALSE, coef = 0) +
-  geom_point() +
-  geom_line(aes(group = subjectID))
-
+  geom_point(color = "gray80") +
+  geom_line(aes(group = subjectID), color = "gray80") +
+  stat_summary(aes(group = condition), fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
+  labs(x = "Condition", y = "Mean Number of Optimal Trials") +
+  scale_x_discrete(labels = c("Cold Pressor", "Control","Fire")) + 
+  theme(axis.text.x = element_text(size = 13), 
+        axis.text.y = element_text(size = 17), 
+        axis.title.x = element_text(size = 17),
+        axis.title.y = element_text(size = 17),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 13), 
+        strip.text = element_text(size = 13))
+  
+jpeg("E:/Nav Stress Data/dissertation/pics/optimal_trials.jpeg", width = 7, height = 6, units = 'in', res = 500)
+optimal_trials
+dev.off()
 
 
 
@@ -468,7 +518,7 @@ sp <- ggscatter(optimal_lost_subj_SOT, x = "lost_trials_count", y = "SOT_stdev",
                 ylab = "SOT SD") + 
   stat_cor(method = "pearson", label.x = 7, label.y = 15)
 
-#jpeg("E:/Nav Stress Data/dissertation/pics/sotLostCorr.jpeg", width = 4, height = 5, units = 'in', res = 500)
+#jpeg("E:/Nav Stress Data/dissertation/pics/sotLostCorr_SD.jpeg", width = 4, height = 5, units = 'in', res = 500)
 sp
 #dev.off()
 
@@ -549,13 +599,6 @@ navTrialsMean <- ggplot(NO_nav_summary, aes(x = grid_type, y = mean_grid_number,
 
 
 
-
-
-
-
-
-
-
 wrap_labels <- c("Novel Grids Used", "Outer Grids Used", "Inner Grids Used")
 names(wrap_labels) <- c("novel_grids", "total_outer_use", "total_inner_use")
 
@@ -577,30 +620,30 @@ trialType <- ggplot(trial_type_summary, aes(x = trial_type, y = mean_grid_number
         strip.text = element_text(size = 13),
         panel.border = element_rect(color = "black", fill = NA, linewidth = 1)) +
   scale_x_discrete(labels = c("Backward", "Diagonal", "Forward"))
-jpeg("E:/Nav Stress Data/dissertation/pics/trialType.jpeg", width = 12, height = 5.75, units = 'in', res = 500)
+#jpeg("E:/Nav Stress Data/dissertation/pics/trialType.jpeg", width = 12, height = 5.75, units = 'in', res = 500)
 trialType
-dev.off()
+#dev.off()
 
 # stats for this figure
+
+
 nav_lm <- lmer(mean_grid_number ~ condition + (1 | subjectID), data = trial_type_summary)
 summary(nav_lm)
 
-# 2-way repeated ANOVA
+# 3-way repeated ANOVA ############################################### come back to this
+trial_type_summary <- as.data.frame(trial_type_summary)
+
 withinTest <- anova_test(data = trial_type_summary, dv = mean_grid_number, wid = subjectID,
-                         within = c(backward, diagonal, forward))
-get_anova_table(withinTest) # everything is sig
+                         within = c(trial_type, grid_type, condition))
+get_anova_table(withinTest) # trial type, grid type, trial type:grid type, trial type:grid type:condition
 
 # post-hoc tests
-one.way <- aov_data %>%
-  group_by(path_recreated_cat) %>%
-  anova_test(dv = mean_percent, wid = subjectID, within = percent_cat) %>%
+one.way <- trial_type_summary %>%
+  group_by(trial_type) %>%
+  anova_test(dv = mean_grid_number, wid = subjectID) %>%
   get_anova_table() %>%
   adjust_pvalue(method = "bonferroni")
 one.way
-
-# have to take out 22 and 26 or pairwise won't work
-aov_data_22_26_gone <- aov_data %>%
-  filter(!(subjectID %in% c(22,26)))
 
 pwc <- aov_data_22_26_gone %>%
   group_by(percent_cat) %>%
@@ -626,6 +669,8 @@ excessPathSummary <- longNav2 %>%
     sd_excess_path = sd(Navigate_excessPath)
   )
 
+##### Learning by block
+
 excessPathPlot <- ggplot(excessPathSummary, aes(x = condition, y = mean_excess_path, fill = block)) + 
   geom_boxplot(outliers = FALSE) +
   geom_jitter(position = position_jitterdodge(), color = "gray40") +
@@ -638,9 +683,26 @@ excessPathPlot <- ggplot(excessPathSummary, aes(x = condition, y = mean_excess_p
         legend.title = element_text(size = 13), 
         strip.text = element_text(size = 13)) +
   scale_x_discrete(labels = c("Cold Pressor", "Control", "Fire Environment"))
-jpeg("C:/Users/amuller/Desktop/Alana/UA/HSCL/Conferences/iNAV 2024/pics/excessPathPlot.jpeg", width = 8, height = 5.75, units = 'in', res = 500)
+#jpeg("C:/Users/amuller/Desktop/Alana/UA/HSCL/Conferences/iNAV 2024/pics/excessPathPlot.jpeg", width = 8, height = 5.75, units = 'in', res = 500)
 excessPathPlot
-dev.off()
+#dev.off()
+
+# Stats for learning by block - COME BACK TO THIS ANALYSIS, IT'S NOT THAT IMPORTANT
+excessPathSummary <- as.data.frame(excessPathSummary)
+
+learn_blocks <- anova_test(data = excessPathSummary, dv = mean_excess_path, wid = subjectID,
+                         within = c(block, condition))
+get_anova_table(learn_blocks) # only block sig
+
+# post-hoc 
+pwc <- excessPathSummary %>%
+  group_by(condition) %>%
+  pairwise_t_test(
+    mean_excess_path ~ block, paired = TRUE,
+    p.adjust.method = "bonferroni"
+  )
+pwc
+
 
 avgExcessPathSubj <- longNav2 %>%
   group_by(subjectID, condition) %>%
@@ -650,20 +712,70 @@ avgExcessPathSubj <- longNav2 %>%
     sd_excessPath = sd(Navigate_excessPath)
   )
 
+avgExcessPathSubj <- avgExcessPathSubj %>%
+  rename("subjNum" = 1)
+
 # Write bigMergeData to a new csv file
 #write.csv(avgExcessPathSubj, "E:/Nav Stress Data/avgExcessPathSubj.csv", row.names = FALSE)
 
 
-##### Correlations with cortisol and excess path
+##### Correlations with cortisol and measures
 # make one big data sheet
-test_bigData <- merge(auc_data, excess_path_data, by.x = 1, by.y = 1, all.x = TRUE, all.y = TRUE)
+bigData <- merge(auc_data_long, excess_path_data, by = c("subjNum", "condition"))
+bigData$log_excessPath <- log(bigData$mean_excessPath)
+
+# Fixing the structure of the dataframe
+bigData$subjNum <- as.factor(bigData$subjNum)
+bigData$condition <- as.factor(bigData$condition)
+bigData$gender <- as.factor(bigData$gender)
 
 
-# baseline cort and excess path
-plot(excess_path_data$mean_excessPath, auc_data$ctrl)
+# log_auc and log excess path
+plot(bigData$auc_log, bigData$log_excessPath)
+cor.test(bigData$auc_log, bigData$log_excessPath) # not sig
+
+aucLog_excessPath_condition <- ggplot(bigData, aes(x = auc_log, y = log_excessPath, color = condition)) + 
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE, aes(fill = condition), alpha = 0.08) +
+  labs(x = "AUC (Log)", y = "Excess Path (Log)",
+       color = "Condition", fill = "Condition") +
+  scale_color_manual(name = "Condition", 
+                     values = c("ctrl" = "green", "cp" = "blue", "fire" = "red"),  # Change colors as needed
+                     labels = c("ctrl" = "Control", "cp" = "Cold Pressor", "fire" = "Fire")) +  # Custom labels
+  scale_fill_manual(name = "Condition", 
+                    values = c("ctrl" = "green", "cp" = "blue", "fire" = "red"),  # Ensure fill colors match
+                    labels = c("ctrl" = "Control", "cp" = "Cold Pressor", "fire" = "Fire")) +  # Custom labels
+  theme(axis.text.x = element_text(size = 13),
+        axis.text.y = element_text(size = 17),
+        axis.title.x = element_text(size = 17),
+        axis.title.y = element_text(size = 17),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 13),
+        strip.text = element_text(size = 13))
+
+jpeg("E:/Nav Stress Data/dissertation/pics/auc_logExcessPath.jpeg", width = 7, height = 6, units = 'in', res = 500)
+aucLog_excessPath_condition
+dev.off()
+
+# The baseline corrected one looks weird because the fire condition has less variance than the other two conditions
+aucBC_excessPath_condition <- ggplot(bigData, aes(x = auc_bc, y = log_excessPath, color = condition)) + 
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE) +
+  labs(x = "AUC Baseline Corrected", y = "Excess Path (Log)") +
+  theme(axis.text.x = element_text(size = 13), 
+        axis.text.y = element_text(size = 17), 
+        axis.title.x = element_text(size = 17),
+        axis.title.y = element_text(size = 17),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 13), 
+        strip.text = element_text(size = 13))
+
+aucBC_excessPath_condition
+
 
 # AUC and excess path
-
+plot(bigData$auc_bc, bigData$log_excessPath)
+cor.test(bigData$auc_bc, bigData$log_excessPath) # not sig
 
 # AUC bc and excess path
 

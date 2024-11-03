@@ -7,8 +7,10 @@ library(ez)
 library(rstatix)
 library(ggpubr)
 
+rm(list = ls())
+
 # Set the directory where the Excel files are stored
-setwd("E:/Nav Stress Pilot Data")
+setwd("E:/Nav Stress Data")
 
 learning_route_data <- read_excel("learned_trials_overlap_repetitions.xlsx", sheet = "Sheet1")
 
@@ -24,7 +26,7 @@ learning_route_data <- rename(learning_route_data, outer_overlap = overlap_outer
 learning_route_data <- rename(learning_route_data, inner_overlap = overlap_inner)
 
 # Set working directory again to grab more files
-setwd("E:/Nav Stress Pilot Data/navTestTrials_datasheets")
+setwd("E:/Nav Stress Data/navTestTrials_datasheets")
 
 # Get a list of all the Excel files in the directory
 excel_files <- list.files(pattern = "\\.xlsx$", full.names = TRUE)
@@ -56,14 +58,22 @@ learning_long_data$first_route_learned <- as.factor(learning_long_data$first_rou
 learning_long_data$second_route_learned <- as.factor(learning_long_data$second_route_learned)
 learning_long_data$path_type <- as.factor(learning_long_data$path_type)
 
-# add percent of 
+# add percent of overlap
 learning_long_data$percent_overlap <- (learning_long_data$overlap / learning_long_data$actual_path_grid_tot) * 100
 
 # uncomment this to save manuscript-quality pics to this folder
-setwd("E:/Nav Stress Pilot Data/pics/SFN2023")
+#setwd("E:/Nav Stress Data/pics/SFN2023")
 
 ####################### STATS TIME: Learning Phase #######################
 # Did participants learn the routes they were supposed to?
+
+overall_percent_overlap <- mean(learning_long_data$percent_overlap)
+percent_overlap_by_rep <- learning_long_data %>%
+  group_by(reps) %>%
+  summarize(
+    count = n(), 
+    mean_percent_overlap = mean(percent_overlap)
+  )
 
 # overlap by reps
 boxplot(overlap~reps,data=learning_long_data)
@@ -87,6 +97,11 @@ aov_data <- learning_long_data %>%
   )
 aov_data <- as_tibble(aov_data)
 
+# one-way anova
+one.way.overlapTest <- anova_test(data = learning_long_data, dv = percent_overlap,
+                         between = reps)
+get_anova_table(one.way.overlapTest)
+
 # summary stats used in 2way rep ANOVA
 aov_means <- learning_long_data %>%
   group_by(path_type, reps) %>%
@@ -109,6 +124,32 @@ bxp <- ggboxplot(
   scale_x_discrete(labels = c("Inner", "Outer"))
 
 #jpeg("pathType_by_rep.jpeg", width = 8.25, height = 5.75, units = 'in', res = 500)
+bxp
+#dev.off()
+
+
+# graph for one-way anova
+aov_data2 <- learning_long_data %>%
+  group_by(subjectID, reps) %>%
+  summarize(
+    mean = mean(percent_overlap, na.rm = TRUE),
+  )
+aov_data2 <- as_tibble(aov_data)
+
+bxp <- ggboxplot(
+  aov_data2, x = "reps", y = "mean", add = "jitter",
+  xlab = "Number of Learning Trial Pairs", ylab = "Percent Overlap",
+  linetype = 1, size = 1) +
+  theme(axis.text.x = element_text(size = 20), 
+        axis.text.y = element_text(size = 20), 
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size = 20)) +
+  scale_y_continuous(breaks = seq(0,100,5)) + 
+  coord_cartesian(ylim = c(70,100))
+
+#jpeg("E:/Nav Stress Data/dissertation/pics/pilot_overlap_reps.jpeg", width = 6, height = 6, units = 'in', res = 500)
 bxp
 #dev.off()
 

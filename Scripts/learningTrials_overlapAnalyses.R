@@ -366,6 +366,9 @@ cor.test(lessFamRecreate$correct_recreation_percent.1, lessFamRecreate$correct_r
 plot(moreFamRecreate$correct_recreation_percent.1, moreFamRecreate$correct_recreation_percent.2)
 plot(lessFamRecreate$correct_recreation_percent.1, lessFamRecreate$correct_recreation_percent.2)
 
+
+
+
 # just do one correlation with first path correlating with second path
 names(moreFamRecreate) <- sub("\\.i", "", names(moreFamRecreate))
 names(lessFamRecreate) <- sub("\\.o", "", names(lessFamRecreate))
@@ -382,20 +385,57 @@ bigMergeData$corMinusIncor2 <- bigMergeData$correct_recreation_percent.2 - bigMe
 
 cor.test(bigMergeData$corMinusIncor1, bigMergeData$corMinusIncor2)
 
+# make a column of correct minus incorrect for more and less familiar
+moreFamSubset <- bigMergeData %>%
+  filter(path_recreated_cat.1 == "moreFamPath")
+lessFamSubset <- bigMergeData %>%
+  filter(path_recreated_cat.1 == "lessFamPath")
+
 # graph for iNAV
 sp <- ggscatter(bigMergeData, x = "corMinusIncor1", y = "corMinusIncor2", 
-          add = "reg.line", 
-          add.params = list(color = "blue", fill = "lightgray"), 
-          conf.int = TRUE, 
-          xlab = "Initial Path Recreation Accuracy",
-          ylab = "End Path Recreation Accuracy") + 
-  stat_cor(method = "pearson", label.x = -.45, label.y = .85)
+                add = "reg.line", 
+                add.params = list(color = "blue", fill = "lightgray"), 
+                conf.int = TRUE, 
+                xlab = "Initial Path Recreation Accuracy",
+                ylab = "End Path Recreation Accuracy") + 
+  stat_cor(method = "pearson", label.x = 0, label.y = .85)
 
-#jpeg("C:/Users/amuller/Desktop/Alana/UA/HSCL/Conferences/iNAV 2024/pics/recreation1and2cor.jpeg", width = 6, height = 5, units = 'in', res = 500)
+#jpeg("E:/Nav Stress Data/dissertation/pics/recreation1and2cor.jpeg", width = 6, height = 5, units = 'in', res = 500)
 sp
 #dev.off()
 
+# graphs for more and less familiar
 
+sp <- ggscatter(moreFamSubset, x = "corMinusIncor1", y = "corMinusIncor2", 
+                add = "reg.line", 
+                add.params = list(color = "blue", fill = "lightgray"), 
+                conf.int = TRUE, 
+                xlab = "Initial Path Recreation Accuracy",
+                ylab = "End Path Recreation Accuracy", 
+                title = "More Familiar Path") + 
+  stat_cor(method = "pearson", label.x = 0.10, label.y = .85) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#jpeg("E:/Nav Stress Data/dissertation/pics/recreation1and2corMOREfam.jpeg", width = 6, height = 3, units = 'in', res = 500)
+sp
+#dev.off()
+
+sp <- ggscatter(lessFamSubset, x = "corMinusIncor1", y = "corMinusIncor2", 
+                add = "reg.line", 
+                add.params = list(color = "blue", fill = "lightgray"), 
+                conf.int = TRUE, 
+                xlab = "Initial Path Recreation Accuracy",
+                ylab = "End Path Recreation Accuracy", 
+                title = "Less Familiar Path") + 
+  stat_cor(method = "pearson", label.x = 0.05, label.y = .85) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#jpeg("E:/Nav Stress Data/dissertation/pics/recreation1and2corLESSfam.jpeg", width = 6, height = 3, units = 'in', res = 500)
+sp
+#dev.off()
+
+res.lm <- lm(data = bigMergeData, corMinusIncor2 ~ corMinusIncor1 * path_recreated_cat.1)
+summary(res.lm)
 
 # Write bigMergeData to a new csv file
 #write.csv(bigMergeData, "E:/Nav Stress Data/surveys/learningTrialsBigMergeData.csv", row.names = FALSE)
@@ -635,6 +675,12 @@ ggplot(moreLessFam_inner, aes(x = path_recreated, y = median_percent_overlap_inn
 # test to see if the medians are different: p < .05, they are different
 # the more familiar path was learned better for outer
 kruskal.test(median_percent_overlap_inner ~ path_recreated, data = moreLessFam_inner)
+
+
+##### Linear model 
+
+lm_results <- lm(data = graphData, correct_recreation_percent ~ path_recreated_cat*path_recreated)
+summary(lm_results)
 
 # Did they learn the route they were supposed to? Is correct different than incorrect
 corr_incorr_summary <- long_corr_incorr %>%
