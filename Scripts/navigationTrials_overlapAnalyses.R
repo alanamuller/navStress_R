@@ -97,6 +97,7 @@ lost_Ss <- subset(navTrialsData, grid_count > mean_gridCount+(2.5*sd_gridCount))
 hist(lost_Ss$grid_count)
 
 #################### What percentage of new/old/novel paths were taken on no lost trials?
+#################### And was it affected by familiarity?
 
 # gather total inner and outer use and novel grids
 # name the columns you want to gather, the other columns will remain there
@@ -226,7 +227,6 @@ basic.lm <- lm(mean_grid_number ~ condition*grid_type, data = NO_nav_summary)
 summary(basic.lm)
 
 
-
 # graph for variance for iNAV
 wrap_labels <- c("Inner More Familiar", "Outer More Familiar")
 names(wrap_labels) <- c("inner", "outer")
@@ -249,6 +249,124 @@ navTrialsSD <- ggplot(NO_nav_summary, aes(x = grid_type, y = sd_grid_number, fil
 #jpeg("E:/Nav Stress Data/dissertation/pics/navTrialsIQR.jpeg", width = 10, height = 5.75, units = 'in', res = 500)
 navTrialsSD
 #dev.off()
+
+########## Data wrangling to get a high and low familiarity category
+
+highLowFam <- NO_nav_summary %>%
+  filter(grid_type == "total_outer_use" | grid_type == "total_inner_use")
+
+highLowFam <- highLowFam %>%
+  mutate(fam_level = case_when(
+    (grid_type == "total_outer_use" & moreFamiliarPath == "outer") ~ "high",
+    (grid_type == "total_inner_use" & moreFamiliarPath == "inner") ~ "high",
+    (grid_type == "total_outer_use" & moreFamiliarPath == "inner") ~ "low",
+    (grid_type == "total_inner_use" & moreFamiliarPath == "outer") ~ "low",
+    TRUE ~ NA_character_  # This will handle any unexpected cases
+  ))
+highLowFam$fam_level <- as.factor(highLowFam$fam_level)
+
+# Graph with familiarity
+wrap_labels <- c("Cold Pressor", "Control", "Fire")
+names(wrap_labels) <- c("cp", "ctrl", "fire")
+tick_labels <- c("Outer Grids", "Inner Grids")
+
+fam_level_plot <- ggplot(highLowFam, aes(x = grid_type, y = mean_grid_number, fill = fam_level)) + 
+  geom_boxplot(outliers = FALSE) + geom_jitter(position = position_jitterdodge()) +
+  stat_summary(aes(group = fam_level), fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
+  labs(x = "Grid Type", y = "Mean Grid Number", fill = "Familiarity") +
+  scale_x_discrete(labels = tick_labels) + 
+  scale_fill_discrete(name = "Familiarity", labels = c("High", "Low"), type = c("#00BA38", "#619CFF")) +
+  theme_classic() +
+  facet_wrap(vars(condition), labeller = labeller(condition = wrap_labels)) +
+  theme(axis.text.x = element_text(size = 13), 
+        axis.text.y = element_text(size = 17), 
+        axis.title.x = element_text(size = 17),
+        axis.title.y = element_text(size = 17),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 13), 
+        strip.text = element_text(size = 13),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 1))
+#jpeg("E:/Nav Stress Data/dissertation/pics/condition_fam_grids.jpeg", width = 10, height = 6, units = 'in', res = 500)
+fam_level_plot
+#dev.off()
+
+# summarize data for linear model
+fam_summary <- highLowFam %>%
+  group_by(subjectID, grid_type, fam_level, condition) %>%
+  summarize(
+    count = n(), 
+    avg_grid_num = mean(mean_grid_number)
+  )
+
+fam_summary <- as.data.frame(fam_summary)
+
+fam.aov <- anova_test(data = fam_summary, dv = avg_grid_num, wid = subjectID, 
+                      within = c(grid_type, condition))
+get_anova_table(fam.aov) # grid type is sig
+
+test_lm <- lm(avg_grid_num ~ grid_type*condition*fam_level, data = fam_summary)
+summary(test_lm)
+
+##### Now do this again with trial type instead of grid type
+highLowFam_trialType <- longNav %>%
+  group_by(subjectID, grid_type, trial_type, moreFamiliarPath, condition) %>%
+  summarize(
+    count = n(),
+    mean_grid_number = mean(grid_number, na.rm = TRUE), 
+    sd_grid_number = sd(grid_number, na.rm = TRUE)
+  )
+
+highLowFam_trialType <- highLowFam_trialType %>%
+  filter(grid_type == "total_outer_use" | grid_type == "total_inner_use")
+
+highLowFam_trialType <- highLowFam_trialType %>%
+  mutate(fam_level = case_when(
+    (grid_type == "total_outer_use" & moreFamiliarPath == "outer") ~ "high",
+    (grid_type == "total_inner_use" & moreFamiliarPath == "inner") ~ "high",
+    (grid_type == "total_outer_use" & moreFamiliarPath == "inner") ~ "low",
+    (grid_type == "total_inner_use" & moreFamiliarPath == "outer") ~ "low",
+    TRUE ~ NA_character_  # This will handle any unexpected cases
+  ))
+highLowFam_trialType$fam_level <- as.factor(highLowFam_trialType$fam_level)
+
+famTrialType_summary <- highLowFam_trialType %>%
+  group_by(subjectID, trial_type, fam_level, condition) %>%
+  summarize(
+    count = n(), 
+    avg_grid_num = mean(mean_grid_number)
+  )
+famTrialType_summary <- as.data.frame(famTrialType_summary)
+
+# graph
+wrap_labels <- c("Cold Pressor", "Control", "Fire")
+names(wrap_labels) <- c("cp", "ctrl", "fire")
+tick_labels <- c("Backward", "Diagonal", "Forward")
+
+fam_level_TrialType_plot <- ggplot(highLowFam_trialType, aes(x = trial_type, y = mean_grid_number, fill = fam_level)) + 
+  geom_boxplot(outliers = FALSE) + geom_jitter(position = position_jitterdodge()) +
+  stat_summary(aes(group = fam_level), fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
+  labs(x = "Trial Type", y = "Mean Grid Number", fill = "Familiarity") +
+  scale_fill_discrete(name = "Familiarity", labels = c("High", "Low"), type = c("#00BA38", "#619CFF")) +
+  theme_classic() +
+  scale_x_discrete(labels = tick_labels) + 
+  facet_wrap(vars(condition), labeller = labeller(condition = wrap_labels)) +
+  theme(axis.text.x = element_text(size = 13), 
+        axis.text.y = element_text(size = 17), 
+        axis.title.x = element_text(size = 17),
+        axis.title.y = element_text(size = 17),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 13), 
+        strip.text = element_text(size = 13),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 1))
+#jpeg("E:/Nav Stress Data/dissertation/pics/condition_fam_grids.jpeg", width = 10, height = 6, units = 'in', res = 500)
+fam_level_TrialType_plot
+#dev.off()
+
+
+
+
+
+
 
 ##### redo the graph above with good and bad navigators
 bad_navs <- NO_nav_summary %>%
