@@ -15,6 +15,7 @@ library(ARTool)
 library(openxlsx)
 library(dplyr)
 library(lme4)
+library(pbkrtest)
 
 rm(list = ls())
 
@@ -115,19 +116,11 @@ nav_summary <- longNav %>%
     sd_grid_number = sd(grid_number, na.rm = TRUE)
   )
 
-# check for outliers
-meanGrid <- mean(nav_summary$mean_grid_number)
-SDGrid <- sd(nav_summary$sd_grid_number)
-
-upperGridRange <- meanGrid + (2.5*SDGrid)
-
-NO_nav_summary <- subset(nav_summary, mean_grid_number < upperGridRange) # 19 outliers
-
 # graph for iNAV
 
 tick_labels <- c("Novel Grids", "Outer Grids", "Inner Grids")
 
-navTrialsMean <- ggplot(NO_nav_summary, aes(x = grid_type, y = mean_grid_number, fill = condition)) + 
+navTrialsMean <- ggplot(nav_summary, aes(x = grid_type, y = mean_grid_number, fill = condition)) + 
   geom_boxplot(outliers = FALSE) + geom_jitter(position = position_jitterdodge()) +
   stat_summary(aes(group = condition), fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
   labs(x = "Grid Type", y = "Mean Grid Number", fill = "Condition") +
@@ -148,7 +141,7 @@ navTrialsMean
 wrap_labels <- c("Inner More Familiar", "Outer More Familiar")
 names(wrap_labels) <- c("inner", "outer")
 
-navTrialsMean <- ggplot(NO_nav_summary, aes(x = grid_type, y = mean_grid_number, fill = condition)) + 
+navTrialsMean <- ggplot(nav_summary, aes(x = grid_type, y = mean_grid_number, fill = condition)) + 
   geom_boxplot(outliers = FALSE) + geom_jitter(position = position_jitterdodge()) +
   stat_summary(aes(group = condition), fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
   labs(x = "Grid Type", y = "Mean Grid Number", fill = "Condition") +
@@ -168,63 +161,50 @@ navTrialsMean <- ggplot(NO_nav_summary, aes(x = grid_type, y = mean_grid_number,
 navTrialsMean
 #dev.off()
 
+# table of trials per condition per participant
+table_subj_cond <- originalData %>%
+  group_by(subjectID, block, condition) %>%
+  summarize(
+    count = n(),
+    mean = mean(grid_count)
+  )
 
-# rep measures mixed ANOVA - needs fixing to account for moreFamiliarPath
+# rep measures mixed ANOVA
 
 # normality check
-normality_each_cond <- NO_nav_summary %>%
+normality_each_cond <- nav_summary %>%
   group_by(condition, grid_type) %>%
   shapiro_test(mean_grid_number)
 normality_each_cond # 3 non sig but overall, really not bad
 
-NO_nav_summary %>%
+nav_summary %>%
   group_by(grid_type) %>%
   levene_test(mean_grid_number ~ condition) # good homogeneity of variance
 
-NO_nav_summary <- as.data.frame(NO_nav_summary)
+nav_summary <- as.data.frame(nav_summary)
                                 
-res.aov <- anova_test(data = NO_nav_summary, dv = mean_grid_number, wid = subjectID, 
+res.aov <- anova_test(data = nav_summary, dv = mean_grid_number, wid = subjectID, 
                       within = c(condition, grid_type))
 get_anova_table(res.aov) # grid type is sig
 
-# testing simple main effects
-one.way <- NO_nav_summary %>%
-  group_by(grid_type) %>%
-  anova_test(dv = mean_grid_number, wid = subjectID, within = condition) %>%
-  get_anova_table() %>%
-  adjust_pvalue(method = "bonferroni")
-one.way
-
-NO_nav_summary %>%
-
-# equal cases so pairing it will work
-pwc <- NO_nav_summary %>%
-  group_by(grid_type) %>%
+# comparisons for grid_type variable
+nav_summary %>%
   pairwise_t_test(
-    mean_grid_number ~ condition, paired =  TRUE,
+    mean_grid_number ~ grid_type, paired = TRUE, 
     p.adjust.method = "bonferroni"
   )
-pwc # cp and fire are sig diff at post15 and post30, nothing else
-
-one.way2 <- NO_nav_summary %>%
-  group_by(condition) %>%
-  anova_test(dv = mean_grid_number, wid = subjectID, within = time) %>%
-  get_anova_table() %>%
-  adjust_pvalue(method = "bonferroni")
-one.way2 # cp is sig
-
-# equal cases so pairing it will work
-pwc2 <- NO_nav_summary %>%
-  group_by(condition) %>%
-  pairwise_t_test(
-    mean_grid_number ~ time, paired = TRUE,
-    p.adjust.method = "bonferroni"
-  )
-pwc2
 
 # Try a linear mixed effects model
-basic.lm <- lm(mean_grid_number ~ condition*grid_type, data = NO_nav_summary)
+basic.lm <- lmer(mean_grid_number ~ grid_type*condition + (1|subjectID), data = nav_summary)
 summary(basic.lm)
+
+# Add moreFamiliarPath to the model
+addFam.lm <- lmer(mean_grid_number ~ grid_type*condition*moreFamiliarPath + (1|subjectID), data = nav_summary)
+summary(addFam.lm)
+
+anova(basic.lm, addFam.lm) # addFam.lm is the better model according to AIC but not BIC
+
+
 
 
 # graph for variance for iNAV
@@ -232,7 +212,7 @@ wrap_labels <- c("Inner More Familiar", "Outer More Familiar")
 names(wrap_labels) <- c("inner", "outer")
 tick_labels <- c("Novel Grids", "Outer Grids", "Inner Grids")
 
-navTrialsSD <- ggplot(NO_nav_summary, aes(x = grid_type, y = sd_grid_number, fill = condition)) + 
+navTrialsSD <- ggplot(nav_summary, aes(x = grid_type, y = sd_grid_number, fill = condition)) + 
   geom_boxplot(outliers = FALSE) + geom_jitter(position = position_jitterdodge()) +
   stat_summary(aes(group = condition), fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
   labs(x = "Grid Type", y = "SD", fill = "Condition") +
@@ -252,7 +232,7 @@ navTrialsSD
 
 ########## Data wrangling to get a high and low familiarity category
 
-highLowFam <- NO_nav_summary %>%
+highLowFam <- nav_summary %>%
   filter(grid_type == "total_outer_use" | grid_type == "total_inner_use")
 
 highLowFam <- highLowFam %>%
@@ -330,7 +310,7 @@ highLowFam_trialType <- highLowFam_trialType %>%
 highLowFam_trialType$fam_level <- as.factor(highLowFam_trialType$fam_level)
 
 famTrialType_summary <- highLowFam_trialType %>%
-  group_by(subjectID, trial_type, fam_level, condition) %>%
+  group_by(subjectID, trial_type, grid_type, condition) %>%
   summarize(
     count = n(), 
     avg_grid_num = mean(mean_grid_number)
@@ -342,13 +322,13 @@ wrap_labels <- c("Cold Pressor", "Control", "Fire")
 names(wrap_labels) <- c("cp", "ctrl", "fire")
 tick_labels <- c("Backward", "Diagonal", "Forward")
 
-fam_level_TrialType_plot <- ggplot(highLowFam_trialType, aes(x = trial_type, y = mean_grid_number, fill = fam_level)) + 
+fam_level_TrialType_plot <- ggplot(highLowFam_trialType, aes(x = trial_type, y = mean_grid_number, fill = grid_type)) + 
   geom_boxplot(outliers = FALSE) + geom_jitter(position = position_jitterdodge()) +
-  stat_summary(aes(group = fam_level), fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
-  labs(x = "Trial Type", y = "Mean Grid Number", fill = "Familiarity") +
-  scale_fill_discrete(name = "Familiarity", labels = c("High", "Low"), type = c("#00BA38", "#619CFF")) +
-  theme_classic() +
+  stat_summary(aes(group = grid_type), fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
+  labs(x = "Trial Type", y = "Mean Grid Number", fill = "Grid Type") +
   scale_x_discrete(labels = tick_labels) + 
+  scale_fill_discrete(name = "Grid Type", labels = c("Outer", "Inner"), type = c("#00BA38", "#619CFF")) +
+  theme_classic() +
   facet_wrap(vars(condition), labeller = labeller(condition = wrap_labels)) +
   theme(axis.text.x = element_text(size = 13), 
         axis.text.y = element_text(size = 17), 
@@ -358,18 +338,13 @@ fam_level_TrialType_plot <- ggplot(highLowFam_trialType, aes(x = trial_type, y =
         legend.title = element_text(size = 13), 
         strip.text = element_text(size = 13),
         panel.border = element_rect(color = "black", fill = NA, linewidth = 1))
-#jpeg("E:/Nav Stress Data/dissertation/pics/condition_fam_grids.jpeg", width = 10, height = 6, units = 'in', res = 500)
+jpeg("E:/Nav Stress Data/dissertation/pics/condition_grid_trialType.jpeg", width = 12, height = 5.75, units = 'in', res = 500)
 fam_level_TrialType_plot
-#dev.off()
-
-
-
-
-
+dev.off()
 
 
 ##### redo the graph above with good and bad navigators
-bad_navs <- NO_nav_summary %>%
+bad_navs <- nav_summary %>%
   filter(subjectID == 15 | subjectID == 16 | subjectID == 22 | subjectID == 23 | subjectID == 30)
 
 wrap_labels <- c("Inner More Familiar", "Outer More Familiar")
@@ -398,7 +373,7 @@ badNavs
 participants_to_exclude <- c(15, 16, 22, 23, 30)
 
 # Exclude data from the specified participants
-good_navs <- NO_nav_summary %>%
+good_navs <- nav_summary %>%
   filter(!subjectID %in% participants_to_exclude)
 
 # redo the graph with only good and great navigators
@@ -426,17 +401,17 @@ goodNavs
 
 
 # check normality
-normality <- NO_nav_summary %>%
+normality <- nav_summary %>%
   group_by(condition, grid_type, moreFamiliarPath) %>%
   shapiro_test(mean_grid_number) # 6 are sig not normal but rest are ok
 
 # ARTool analysis - need some help here
-n <- art(mean_grid_number ~ condition*grid_type*moreFamiliarPath + Error(condition), data = NO_nav_summary)
+n <- art(mean_grid_number ~ condition*grid_type*moreFamiliarPath + Error(condition), data = nav_summary)
 summary(n) # still may not be appropriate
 anova(n) # lots of sig
 
 # try regular anova - same as ARTool mostly
-res.aov <- aov(mean_grid_number ~ condition*grid_type*moreFamiliarPath, data = NO_nav_summary)
+res.aov <- aov(mean_grid_number ~ condition*grid_type*moreFamiliarPath, data = nav_summary)
 summary(res.aov)
 
 # one data point per person per grid type
@@ -507,12 +482,12 @@ sdGrid <- sd(nav_summary2$sd_grid_number)
 
 upperGridRange <- meanGrid + (2.5*sdGrid)
 
-NO_nav_summary2 <- subset(nav_summary2, mean_grid_number < upperGridRange)
+nav_summary2 <- subset(nav_summary2, mean_grid_number < upperGridRange)
 
 # graph for iNAV
 tick_labels <- c("Novel Grids", "More Familiar Path Grids", "Less Familiar Path Grids")
 
-navPlot <- ggplot(NO_nav_summary2, aes(x = grid_type, y = mean_grid_number, fill = condition)) + 
+navPlot <- ggplot(nav_summary2, aes(x = grid_type, y = mean_grid_number, fill = condition)) + 
   geom_boxplot(outliers = FALSE) + geom_jitter(position = position_jitterdodge()) +
   stat_summary(aes(group = condition), fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
   labs(x = "Grid Type", y = "Mean Grid Number", fill = "Condition") +
@@ -596,9 +571,9 @@ optimal_trials <- ggplot(optimal_by_condition, aes(x = condition, y = optimal_na
         legend.title = element_text(size = 13), 
         strip.text = element_text(size = 13))
   
-jpeg("E:/Nav Stress Data/dissertation/pics/optimal_trials.jpeg", width = 7, height = 6, units = 'in', res = 500)
+#jpeg("E:/Nav Stress Data/dissertation/pics/optimal_trials.jpeg", width = 7, height = 6, units = 'in', res = 500)
 optimal_trials
-dev.off()
+#dev.off()
 
 
 
@@ -674,7 +649,7 @@ ggplot(nav_lost, aes(x = grid_type, y = mean_grid_number, fill = condition)) +
   stat_summary(aes(group = condition), fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
   geom_jitter(position = position_jitterdodge())
 
-# Do people use the same paths forward, backward, and diagonal?
+##################### Do people use the same paths forward, backward, and diagonal?
 
 # one data point per person per grid type
 trial_type_summary <- longNav %>%
