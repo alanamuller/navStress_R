@@ -20,7 +20,7 @@ library(pbkrtest)
 rm(list = ls())
 
 ##### Read in data
-setwd("E:/Nav Stress Data/") # set working directory
+setwd("D:/Nav Stress Data/") # set working directory
 # setwd("C:/Users/amuller/Desktop/Alana/UA/HSCL/Stress shortcuts") # for developing
 
 ################################# look at nav trials data
@@ -36,7 +36,7 @@ auc_data <- read.csv("auc_data.csv") # read in completed cases for area under th
 auc_data_long <- read.csv("auc_long_data.csv") # read in long version of auc table
 cort_data <- read.csv("mean_cort_table_nmol_L.csv")
 
-demographic_data <- read_excel("NavStressDemographics.xlsx") # read in demographics
+demographic_data <- read.xlsx("NavStressDemographics.xlsx") # read in demographics
 excess_path_data <- read.csv("avgExcessPathSubj.csv") # read in excess path for each participant
 
 # make the correct variables factors
@@ -280,10 +280,6 @@ fam_summary <- highLowFam %>%
 
 fam_summary <- as.data.frame(fam_summary)
 
-fam.aov <- anova_test(data = fam_summary, dv = avg_grid_num, wid = subjectID, 
-                      within = c(grid_type, condition))
-get_anova_table(fam.aov) # grid type is sig
-
 test_lm <- lm(avg_grid_num ~ grid_type*condition*fam_level, data = fam_summary)
 summary(test_lm)
 
@@ -310,7 +306,7 @@ highLowFam_trialType <- highLowFam_trialType %>%
 highLowFam_trialType$fam_level <- as.factor(highLowFam_trialType$fam_level)
 
 famTrialType_summary <- highLowFam_trialType %>%
-  group_by(subjectID, trial_type, grid_type, condition) %>%
+  group_by(subjectID, trial_type, grid_type, fam_level, condition) %>%
   summarize(
     count = n(), 
     avg_grid_num = mean(mean_grid_number)
@@ -322,14 +318,14 @@ wrap_labels <- c("Cold Pressor", "Control", "Fire")
 names(wrap_labels) <- c("cp", "ctrl", "fire")
 tick_labels <- c("Backward", "Diagonal", "Forward")
 
-fam_level_TrialType_plot <- ggplot(highLowFam_trialType, aes(x = trial_type, y = mean_grid_number, fill = grid_type)) + 
+fam_grid_TrialType_plot <- ggplot(famTrialType_summary, aes(x = trial_type, y = avg_grid_num, fill = fam_level)) + 
   geom_boxplot(outliers = FALSE) + geom_jitter(position = position_jitterdodge()) +
-  stat_summary(aes(group = grid_type), fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
+  stat_summary(aes(group = fam_level), fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
   labs(x = "Trial Type", y = "Mean Grid Number", fill = "Grid Type") +
   scale_x_discrete(labels = tick_labels) + 
-  scale_fill_discrete(name = "Grid Type", labels = c("Outer", "Inner"), type = c("#00BA38", "#619CFF")) +
-  theme_classic() +
+  scale_fill_discrete(name = "Familiarity", labels = c("High", "Low"), type = c("#00BA38", "#619CFF")) +
   facet_wrap(vars(condition), labeller = labeller(condition = wrap_labels)) +
+  theme_classic() +
   theme(axis.text.x = element_text(size = 13), 
         axis.text.y = element_text(size = 17), 
         axis.title.x = element_text(size = 17),
@@ -338,9 +334,18 @@ fam_level_TrialType_plot <- ggplot(highLowFam_trialType, aes(x = trial_type, y =
         legend.title = element_text(size = 13), 
         strip.text = element_text(size = 13),
         panel.border = element_rect(color = "black", fill = NA, linewidth = 1))
-jpeg("E:/Nav Stress Data/dissertation/pics/condition_grid_trialType.jpeg", width = 12, height = 5.75, units = 'in', res = 500)
-fam_level_TrialType_plot
-dev.off()
+#jpeg("D:/Nav Stress Data/dissertation/pics/fam_grid_trialType.jpeg", width = 12, height = 5.75, units = 'in', res = 500)
+fam_grid_TrialType_plot
+#dev.off()
+
+# anova
+res.aov <- anova_test(data = famTrialType_summary, dv = avg_grid_num, wid = subjectID, 
+                      within = c(condition, grid_type, trial_type))
+get_anova_table(res.aov) # grid_type, trial type, and grid type:trial type sig
+
+res.aov <- anova_test(data = famTrialType_summary, dv = avg_grid_num, wid = subjectID, 
+                      within = c(condition, trial_type, fam_level))
+get_anova_table(res.aov) # trial type and fam_level sig
 
 
 ##### redo the graph above with good and bad navigators
@@ -563,6 +568,7 @@ optimal_trials <- ggplot(optimal_by_condition, aes(x = condition, y = optimal_na
   stat_summary(aes(group = condition), fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
   labs(x = "Condition", y = "Mean Number of Optimal Trials") +
   scale_x_discrete(labels = c("Cold Pressor", "Control","Fire")) + 
+  theme_classic() +
   theme(axis.text.x = element_text(size = 13), 
         axis.text.y = element_text(size = 17), 
         axis.title.x = element_text(size = 17),
@@ -571,11 +577,16 @@ optimal_trials <- ggplot(optimal_by_condition, aes(x = condition, y = optimal_na
         legend.title = element_text(size = 13), 
         strip.text = element_text(size = 13))
   
-#jpeg("E:/Nav Stress Data/dissertation/pics/optimal_trials.jpeg", width = 7, height = 6, units = 'in', res = 500)
+#jpeg("D:/Nav Stress Data/dissertation/pics/optimal_trials.jpeg", width = 7, height = 6, units = 'in', res = 500)
 optimal_trials
 #dev.off()
 
+# ANOVA
+optimal_by_condition <- as.data.frame(optimal_by_condition)
 
+opt.res.aov <- anova_test(data = optimal_by_condition, dv = optimal_nav_count, wid = subjectID, 
+                      within = condition)
+get_anova_table(opt.res.aov) # not sig
 
 # check angular error for outliers - 1 at 116 SOT error
 mean_SOT <- mean(optimal_lost_subj_SOT$SOT_average_angular_error)
@@ -659,38 +670,6 @@ trial_type_summary <- longNav %>%
     mean_grid_number = mean(grid_number, na.rm = TRUE), 
     sd_grid_number = sd(grid_number, na.rm = TRUE)
   )
-
-# check for outliers
-meanGrid <- mean(trial_type_summary$mean_grid_number)
-sdGrid <- IQR(trial_type_summary$sd_grid_number)
-
-upperGridRange <- meanGrid + (2.5*sdGrid)
-
-trial_type_summary <- subset(trial_type_summary, mean_grid_number < upperGridRange)
-
-
-
-
-
-
-
-
-
-wrap_labels <- c("Inner More Familiar", "Outer More Familiar")
-names(wrap_labels) <- c("inner", "outer")
-
-navTrialsMean <- ggplot(NO_nav_summary, aes(x = grid_type, y = mean_grid_number, fill = condition)) + 
-  geom_boxplot(outliers = FALSE) + geom_jitter(position = position_jitterdodge()) +
-  stat_summary(aes(group = condition), fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
-  labs(x = "Grid Type", y = "Mean Grid Number", fill = "Condition") +
-  theme_classic() +
-  scale_x_discrete(labels = tick_labels) + 
-  scale_fill_discrete(name = "Condition", labels = c("Cold Pressor", "Control", "Fire Environment"), type = c("deep sky blue", "lime green", "salmon")) +
-  facet_wrap(vars(moreFamiliarPath), labeller = labeller(moreFamiliarPath = wrap_labels))
-
-
-
-
 
 wrap_labels <- c("Novel Grids Used", "Outer Grids Used", "Inner Grids Used")
 names(wrap_labels) <- c("novel_grids", "total_outer_use", "total_inner_use")
@@ -830,6 +809,7 @@ cor.test(bigData$auc_log, bigData$log_excessPath) # not sig
 aucLog_excessPath_condition <- ggplot(bigData, aes(x = auc_log, y = log_excessPath, color = condition)) + 
   geom_point() +
   geom_smooth(method = "lm", se = TRUE, aes(fill = condition), alpha = 0.08) +
+  theme_classic() +
   labs(x = "AUC (Log)", y = "Excess Path (Log)",
        color = "Condition", fill = "Condition") +
   scale_color_manual(name = "Condition", 
@@ -846,9 +826,9 @@ aucLog_excessPath_condition <- ggplot(bigData, aes(x = auc_log, y = log_excessPa
         legend.title = element_text(size = 13),
         strip.text = element_text(size = 13))
 
-jpeg("E:/Nav Stress Data/dissertation/pics/auc_logExcessPath.jpeg", width = 7, height = 6, units = 'in', res = 500)
+#jpeg("D:/Nav Stress Data/dissertation/pics/auc_logExcessPath.jpeg", width = 7, height = 6, units = 'in', res = 500)
 aucLog_excessPath_condition
-dev.off()
+#dev.off()
 
 # The baseline corrected one looks weird because the fire condition has less variance than the other two conditions
 aucBC_excessPath_condition <- ggplot(bigData, aes(x = auc_bc, y = log_excessPath, color = condition)) + 
@@ -870,14 +850,22 @@ aucBC_excessPath_condition
 plot(bigData$auc_bc, bigData$log_excessPath)
 cor.test(bigData$auc_bc, bigData$log_excessPath) # not sig
 
-# AUC bc and excess path
+# AUC and excess path by condition
+auc_cp <- bigData %>%
+  filter(condition == "cp")
+auc_ctrl <- bigData %>%
+  filter(condition == "ctrl")
+auc_fire <- bigData %>%
+  filter(condition == "fire")
 
+plot(auc_cp$auc_log, auc_cp$log_excessPath)
+cor.test(auc_cp$auc_log, auc_cp$log_excessPath) # not sig for cp
 
+plot(auc_ctrl$auc_log, auc_ctrl$log_excessPath)
+cor.test(auc_ctrl$auc_log, auc_ctrl$log_excessPath) # not sig for ctrl
 
-
-
-
-
+plot(auc_fire$auc_log, auc_fire$log_excessPath)
+cor.test(auc_fire$auc_log, auc_fire$log_excessPath) # not sig for fire
 
 
 
