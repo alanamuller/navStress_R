@@ -10,9 +10,9 @@ library(ggpubr)
 rm(list = ls())
 
 # Set the directory where the Excel files are stored
-setwd("E:/Nav Stress Data")
+setwd("D:/Nav Stress Data")
 
-learning_route_data <- read_excel("learned_trials_overlap_repetitions.xlsx", sheet = "Sheet1")
+learning_route_data <- read_excel("pilot_learned_trials_overlap_repetitions.xlsx", sheet = "Sheet1")
 
 # fix the structure of the data
 learning_route_data$subjectID <- as.factor(learning_route_data$subjectID)
