@@ -2,6 +2,7 @@ library(stringr)
 library(tidyverse)
 library(dplyr)
 library(openxlsx)
+library(ggplot2)
 
 # Made by Alana Muller with a lot of help from ChatGPT
 
@@ -23,12 +24,12 @@ rm(list = ls())
 
 # Set working directory
 # setwd("C:/Users/amuller/Desktop/Alana/UA/HSCL/Stress Shortcuts/stress-shortcuts-collab/data/tmp")
-setwd("E:/Nav Stress Pilot Data/pilot2") # for hard drive
+setwd("E:/Nav Stress Data/pilot") # for hard drive
 # setwd("C:/Users/almul/OneDrive/Desktop/Alana/UA/HSCL/Stress Shortcuts")
 
 ##### Change this to run next subject
 
-subject_num <- "P2_001"
+subject_num <- "P001"
 
 # Load the data
 input_file <- paste(subject_num, ".log", sep = "")
@@ -38,7 +39,7 @@ input_data <- paste(readLines(input_file), collapse="\n")
 text <- input_data
 
 # set working directory to save pics - make sure a new folder is created already for the subject's pics
-folder_name <- paste("E:/Nav Stress Pilot Data/pics/", subject_num, sep = "")
+folder_name <- paste("E:/Nav Stress Data/pilot/pics/", subject_num, sep = "")
 
 setwd(folder_name)
 
@@ -134,9 +135,9 @@ p <- ggplot(outer_passive_df_list[[1]], aes(x = pos_X, y = pos_Z, color = time_s
   geom_text(aes(x = 200, y = -235, label = "Store 3"), size = 4, color = "black") +
   geom_text(aes(x = -160, y = -135, label = "Store 4"), size = 4, color = "black")
 
-jpeg("outer_passive1.jpeg", width = 7, height = 6, units = 'in', res = 500)
+#jpeg("outer_passive1.jpeg", width = 7, height = 6, units = 'in', res = 500)
 p
-dev.off()
+#dev.off()
 
 ############# Extract all lines between TASK_START LearnActivePath ActivePathStart and TASK_END LearnActivePath ActivePathStart
 
@@ -216,9 +217,9 @@ p <- ggplot(outer_active_df_list[[length(outer_active_df_list)]], aes(x = pos_X,
   geom_text(aes(x = 200, y = -235, label = "Store 3"), size = 4, color = "black") +
   geom_text(aes(x = -160, y = -135, label = "Store 4"), size = 4, color = "black")
 
-jpeg(plot_name, width = 7, height = 6, units = 'in', res = 500)
+#jpeg(plot_name, width = 7, height = 6, units = 'in', res = 500)
 p
-dev.off()
+#dev.off()
 
 # Use last trial as the actual whole path length
 outer_actual_dist <- totDist(outer_active_df_list[[length(outer_active_df_list)]]$pos_X, outer_active_df_list[[length(outer_active_df_list)]]$pos_Z)
@@ -310,9 +311,9 @@ p <- ggplot(outer_navInOrder_all_dfs, aes(x = pos_X, y = pos_Z, color = time_sec
   geom_text(aes(x = 220, y = -275, label = "Store 3"), size = 7, color = "black") +
   geom_text(aes(x = -230, y = -130, label = "Store 4"), size = 7, color = "black")
 
-jpeg("outer_navInOrder.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500)
+#jpeg("outer_navInOrder.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500)
 p
-dev.off()
+#dev.off()
 
 ##################################### EXTRACT INNER PATH: PASSIVE AND ACTIVE LEARNING #####################################
 
@@ -398,9 +399,9 @@ p <- ggplot(inner_passive_df_list[[1]], aes(x = pos_X, y = pos_Z, color = time_s
   geom_text(aes(x = 200, y = -235, label = "Store 3"), size = 4, color = "black") +
   geom_text(aes(x = -160, y = -135, label = "Store 4"), size = 4, color = "black")
 
-jpeg("inner_passive1.jpeg", width = 7, height = 6, units = 'in', res = 500)
+#jpeg("inner_passive1.jpeg", width = 7, height = 6, units = 'in', res = 500)
 p
-dev.off()
+#dev.off()
 
 ############# Extract all lines between TASK_START LearnActivePath ActivePathStart and TASK_END LearnActivePath ActivePathStart
 
@@ -478,9 +479,9 @@ p <- ggplot(inner_active_df_list[[length(inner_active_df_list)]], aes(x = pos_X,
   geom_text(aes(x = 200, y = -235, label = "Store 3"), size = 4, color = "black") +
   geom_text(aes(x = -160, y = -135, label = "Store 4"), size = 4, color = "black")
 
-jpeg(plot_name, width = 7, height = 6, units = 'in', res = 500)
+#jpeg(plot_name, width = 7, height = 6, units = 'in', res = 500)
 p
-dev.off()
+#dev.off()
 
 # inner path actual path length
 inner_actual_dist <- totDist(inner_active_df_list[[length(inner_active_df_list)]]$pos_X, inner_active_df_list[[length(inner_active_df_list)]]$pos_Z)
@@ -572,9 +573,9 @@ p <- ggplot(inner_navInOrder_all_dfs, aes(x = pos_X, y = pos_Z, color = time_sec
   geom_text(aes(x = 220, y = -275, label = "Store 3"), size = 7, color = "black") +
   geom_text(aes(x = -230, y = -130, label = "Store 4"), size = 7, color = "black")
 
-jpeg("Inner_navInOrder.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500)
+#jpeg("Inner_navInOrder.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500)
 p
-dev.off()
+#dev.off()
 
 ##################### Getting the closest points to separate the whole active path into four segments #####################
 
@@ -778,9 +779,9 @@ p <- ggplot(navTest_all_dfs, aes(x = pos_X, y = pos_Z, color = time_sec)) +
   geom_text(aes(x = 220, y = -275, label = "Store 3"), size = 7, color = "black") +
   geom_text(aes(x = -230, y = -130, label = "Store 4"), size = 7, color = "black")
 
-jpeg("all_navTest_trials.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500)
+#jpeg("all_navTest_trials.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500)
 p
-dev.off()
+#dev.off()
 
 ############# Make another dataframe pulling the numbers that Mike generated in the avatar log (has optimal path)
 ############# This data frame combines with the overlapping segment code at the bottom
@@ -945,7 +946,7 @@ path_dist_df <- path_dist_df[c(ncol(path_dist_df), 1:ncol(path_dist_df)-1)]
 # write dataframe to an excel file
 
 file_name <- paste(subject_num, "_partial_data.xlsx", sep = "")
-write.xlsx(path_dist_df, file_name, rowNames = FALSE)
+#write.xlsx(path_dist_df, file_name, rowNames = FALSE)
 
 ####################### Make 24 plots for each nav test trial #######################
 

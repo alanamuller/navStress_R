@@ -24,13 +24,13 @@ rm(list = ls())
 
 # Set working directory
 # setwd("C:/Users/amuller/Desktop/Alana/UA/HSCL/Stress Shortcuts/stress-shortcuts-collab/data/tmp")
- setwd("E:/Nav Stress Data/pilot") # for hard drive
+setwd("E:/Nav Stress Data/pilot") # for hard drive
 # setwd("C:/Users/almul/OneDrive/Desktop/Alana/UA/HSCL/Stress Shortcuts")
 
 ##### Change this to run next subject
 
 subject_num <- "P001"
- 
+
 # Load the data
 input_file <- paste(subject_num, ".log", sep = "")
 # input_file <- "mini_test_log.txt"
@@ -147,6 +147,7 @@ colnames(outer_active_df)[1] <- "outer_active_task"
 
 outer_active_df_list <- lapply(seq_len(nrow(outer_active_df)), function(i) data.frame(value = outer_active_df[i, ]))
 
+
 # Loop through each of the dataframes in the list to do the stuff below
 
 for (i in seq_along(outer_active_df_list)) {
@@ -224,18 +225,20 @@ p
 outer_actual_dist <- totDist(outer_active_df_list[[length(outer_active_df_list)]]$pos_X, outer_active_df_list[[length(outer_active_df_list)]]$pos_Z)
 
 
-############# Extract all lines between TASK_START Exploration	NavigationTask and TASK_END Exploration NavigationTask	
+############# Extract all lines between TASK_START Navigate	NavigationTask and TASK_END Navigate NavigationTask	
 
-matches <- str_extract_all(outer_df[1], "(?s)TASK_START\\s+Exploration\\s+NavigationTask.*?TASK_END\\s+Exploration\\s+NavigationTask")
-outer_recreate1_df <- data.frame(matches, stringsAsFactors = FALSE)
-colnames(outer_recreate1_df)[1] <- "outer_recreate1_task"
+matches <- str_extract_all(outer_df[1], "(?s)TASK_START\\s+Navigate\\s+NavigationTask.*?TASK_END\\s+Navigate\\s+NavigationTask")
+outer_navInOrder_df <- data.frame(matches, stringsAsFactors = FALSE)
+colnames(outer_navInOrder_df)[1] <- "outer_navInOrder_task"
 
-outer_recreate1_df_list <- lapply(seq_len(nrow(outer_recreate1_df)), function(i) data.frame(value = outer_recreate1_df[i, ]))
+outer_navInOrder_df_list <- lapply(seq_len(nrow(outer_navInOrder_df)), function(i) data.frame(value = outer_navInOrder_df[i, ]))
 
-# Run the code below for the one dataframe with the recreated path
+# Loop through each of the dataframes in the list to do the stuff below
 
+for (i in seq_along(outer_navInOrder_df_list)) {
+  
   # Get the dataframe from the list
-  data_df <- outer_recreate1_df
+  data_df <- outer_navInOrder_df_list[[i]]
   
   # Convert the data to a tibble
   data_df <- tibble(data_df = str_split(data_df, "\n")[[1]])
@@ -273,16 +276,23 @@ outer_recreate1_df_list <- lapply(seq_len(nrow(outer_recreate1_df)), function(i)
     mutate(time_ms = avatar_number - avatar_initial_number,
            time_sec = time_ms/1000)
   
-  # Update the dataframe in the list
-  outer_recreate1_df <- data_df
+  # Add a column to mark the condition and trial name and number (e.g. outer_passive1)
+  data_df$trialname <- paste0("outer_navInOrder", i)
   
+  # Update the dataframe in the list
+  outer_navInOrder_df_list[[i]] <- data_df
+  
+}
+
+# make one big dataframe with all outer nav in order x z values
+outer_navInOrder_all_dfs <- do.call(rbind, outer_navInOrder_df_list)
 
 # this is the participant's whole traveled path (segments combined together)
-#x <- outer_recreate1_df$pos_X
-#z <- outer_recreate1_df$pos_Z
+#x <- outer_navInOrder_all_dfs$pos_X
+#z <- outer_navInOrder_all_dfs$pos_Z
 #plot(x,z)
 
-p <- ggplot(outer_recreate1_df, aes(x = pos_X, y = pos_Z, color = time_sec)) +
+p <- ggplot(outer_navInOrder_all_dfs, aes(x = pos_X, y = pos_Z, color = time_sec)) +
   geom_point() +
   scale_color_gradient(low = "lightblue", high = "darkblue") +
   labs(x = "X", y = "Y", color = "Time (s)", title = "Recreated Outer Path") +
@@ -301,7 +311,7 @@ p <- ggplot(outer_recreate1_df, aes(x = pos_X, y = pos_Z, color = time_sec)) +
   geom_text(aes(x = 220, y = -275, label = "Store 3"), size = 7, color = "black") +
   geom_text(aes(x = -230, y = -130, label = "Store 4"), size = 7, color = "black")
 
-#jpeg("outer_recreate1.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500)
+#jpeg("outer_navInOrder.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500)
 p
 #dev.off()
 
@@ -476,108 +486,20 @@ p
 # inner path actual path length
 inner_actual_dist <- totDist(inner_active_df_list[[length(inner_active_df_list)]]$pos_X, inner_active_df_list[[length(inner_active_df_list)]]$pos_Z)
 
-############# Extract all lines between TASK_START Exploration	NavigationTask and TASK_END Exploration NavigationTask	
+############# Extract all lines between TASK_START Navigate	NavigationTask and TASK_END Navigate NavigationTask	
 
-matches <- str_extract_all(inner_df[1], "(?s)TASK_START\\s+Exploration\\s+NavigationTask.*?TASK_END\\s+Exploration\\s+NavigationTask")
-inner_recreate1_df <- data.frame(matches, stringsAsFactors = FALSE)
-colnames(inner_recreate1_df)[1] <- "inner_recreate1_task"
+matches <- str_extract_all(inner_df[1], "(?s)TASK_START\\s+Navigate\\s+NavigationTask.*?TASK_END\\s+Navigate\\s+NavigationTask")
+inner_navInOrder_df <- data.frame(matches, stringsAsFactors = FALSE)
+colnames(inner_navInOrder_df)[1] <- "inner_navInOrder_task"
 
-# Run the code below for the one dataframe with the recreated path
-
-# Get the dataframe from the list
-data_df <- inner_recreate1_df
-
-# Convert the data to a tibble
-data_df <- tibble(data_df = str_split(data_df, "\n")[[1]])
-
-# Use regular expressions to extract the number before "Avatar:"
-data_df <- data_df %>%
-  mutate(avatar_number = str_extract(data_df, "\\d+(?=\\tAvatar:)"))
-
-# Use regular expressions to extract the three numbers after "Position (xyz):"
-data_df <- data_df %>%
-  mutate(numbers = str_extract_all(data_df, "(?<=Position \\(xyz\\): \\s)[0-9.eE+-]+\\s+[0-9.eE+-]+\\s+[0-9.eE+-]+"))
-
-# Split the numbers column into three separate columns
-data_df <- data_df %>%
-  separate(numbers, into = c("pos_X", "pos_Y", "pos_Z"), sep = "\t")
-
-# Use regular expressions to extract the three numbers after "Rotation (xyz):"
-data_df <- data_df %>%
-  mutate(numbers = str_extract_all(data_df, "(?<=Rotation \\(xyz\\): \\s)[0-9.eE+-]+\\s+[0-9.eE+-]+\\s+[0-9.eE+-]+"))
-
-# Split the numbers column into three separate columns
-data_df <- data_df %>%
-  separate(numbers, into = c("rot_X", "rot_Y", "rot_Z"), sep = "\t")
-
-# Convert the columns to numeric
-data_df <- data_df %>%
-  mutate(across(2:8, as.numeric))
-
-# Remove the rows with NAs
-data_df <- na.omit(data_df)
-
-# Make column for time stamp by making avatar number start from 0
-avatar_initial_number <- data_df$avatar_number[1]
-data_df <- data_df %>%
-  mutate(time_ms = avatar_number - avatar_initial_number,
-         time_sec = time_ms/1000)
-
-# Update the dataframe in the list
-inner_recreate1_df <- data_df
-
-# participant's whole path
-x <- inner_recreate1_df$pos_X
-z <- inner_recreate1_df$pos_Z
-plot(x,z)
-
-
-p <- ggplot(inner_recreate1_df, aes(x = pos_X, y = pos_Z, color = time_sec)) +
-  geom_point() +
-  scale_color_gradient(low = "lightblue", high = "darkblue") +
-  labs(x = "X", y = "Y", color = "Time (s)", title = "Recreate Inner Path") +
-  theme(plot.title = element_text(hjust = 0.5, size = 20), 
-        axis.title = element_text(size = 13), axis.text = element_text(size = 12), 
-        legend.title = element_text(size = 13), legend.text = element_text(size = 12)) +
-  coord_cartesian(ylim = c(-350,350), xlim = c(-350,350)) +
-  scale_y_continuous(breaks = seq(-400,400,100)) +
-  scale_x_continuous(breaks = seq(-400,400,100)) +
-  geom_point(aes(x = -249.37, y = 279.16), size = 5, color = "red") +
-  geom_point(aes(x = 207.3, y = 99.9), size = 5, color = "red") +
-  geom_point(aes(x = 145.79, y = -231.68), size = 5, color = "red") +
-  geom_point(aes(x = -130.43, y = -112.92), size = 5, color = "red") +
-  geom_text(aes(x = -300, y = 350, label = "Store 1"), size = 7, color = "black") +
-  geom_text(aes(x = 280, y = 140, label = "Store 2"), size = 7, color = "black") +
-  geom_text(aes(x = 220, y = -275, label = "Store 3"), size = 7, color = "black") +
-  geom_text(aes(x = -230, y = -130, label = "Store 4"), size = 7, color = "black")
-
-#jpeg("Inner_recreate1.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500)
-p
-#dev.off()
-
-
-##################### Recreating the path at the end of the experiment ##################### 
-
-############# Extract all lines between TASK_START TASK_RecreatePathsAgain and TASK_END TASK_RecreatePathsAgain
-
-matches <- str_extract_all(text, "(?s)TASK_START\\s+TASK_RecreatePathsAgain\\s+(.*?)\\s+TASK_END\\s+TASK_RecreatePathsAgain") # finds the data between the start and end point
-recreate2_df <- data.frame(matches, stringsAsFactors = FALSE) # make one big dataframe for recreated paths at the end of experiment
-colnames(recreate2_df)[1] <- "recreate2"
-
-############# Extract all lines between TASK_START Exploration	NavigationTask and TASK_END Exploration NavigationTask	
-
-matches <- str_extract_all(recreate2_df[1], "(?s)TASK_START\\s+Exploration\\s+NavigationTask.*?TASK_END\\s+Exploration\\s+NavigationTask")
-recreate2_df <- data.frame(matches, stringsAsFactors = FALSE)
-colnames(recreate2_df)[1] <- "recreate2_task"
-
-recreate2_df_list <- lapply(seq_len(nrow(recreate2_df)), function(i) data.frame(value = recreate2_df[i, ]))
+inner_navInOrder_df_list <- lapply(seq_len(nrow(inner_navInOrder_df)), function(i) data.frame(value = inner_navInOrder_df[i, ]))
 
 # Loop through each of the dataframes in the list to do the stuff below
 
-for (i in seq_along(recreate2_df_list)) {
+for (i in seq_along(inner_navInOrder_df_list)) {
   
   # Get the dataframe from the list
-  data_df <- recreate2_df_list[[i]]
+  data_df <- inner_navInOrder_df_list[[i]]
   
   # Convert the data to a tibble
   data_df <- tibble(data_df = str_split(data_df, "\n")[[1]])
@@ -616,56 +538,44 @@ for (i in seq_along(recreate2_df_list)) {
            time_sec = time_ms/1000)
   
   # Add a column to mark the condition and trial name and number (e.g. inner_passive1)
-  data_df$trialname <- paste0("inner_active", i)
+  data_df$trialname <- paste0("inner_navInOrder", i)
   
   # Update the dataframe in the list
-  recreate2_df_list[[i]] <- data_df
+  inner_navInOrder_df_list[[i]] <- data_df
   
 }
 
-plot_name <- paste("recreated_path", "1", ".jpg", sep = "")
-p <- ggplot(recreate2_df_list[[1]], aes(x = pos_X, y = pos_Z, color = time_sec)) +
+# make one big dataframe with all inner nav in order x z values
+inner_navInOrder_all_dfs <- do.call(rbind, inner_navInOrder_df_list)
+
+# participant's whole path
+#x <- inner_navInOrder_all_dfs$pos_X
+#z <- inner_navInOrder_all_dfs$pos_Z
+#plot(x,z)
+
+
+p <- ggplot(inner_navInOrder_all_dfs, aes(x = pos_X, y = pos_Z, color = time_sec)) +
   geom_point() +
   scale_color_gradient(low = "lightblue", high = "darkblue") +
-  labs(x = "X", y = "Y", color = "Time (s)", title = "Recreated Path 1") +
-  theme(plot.title = element_text(hjust = 0.5, size = 16), 
+  labs(x = "X", y = "Y", color = "Time (s)", title = "Recreate Inner Path") +
+  theme(plot.title = element_text(hjust = 0.5, size = 20), 
         axis.title = element_text(size = 13), axis.text = element_text(size = 12), 
         legend.title = element_text(size = 13), legend.text = element_text(size = 12)) +
+  coord_cartesian(ylim = c(-350,350), xlim = c(-350,350)) +
+  scale_y_continuous(breaks = seq(-400,400,100)) +
+  scale_x_continuous(breaks = seq(-400,400,100)) +
   geom_point(aes(x = -249.37, y = 279.16), size = 5, color = "red") +
   geom_point(aes(x = 207.3, y = 99.9), size = 5, color = "red") +
   geom_point(aes(x = 145.79, y = -231.68), size = 5, color = "red") +
   geom_point(aes(x = -130.43, y = -112.92), size = 5, color = "red") +
-  geom_text(aes(x = -280, y = 300, label = "Store 1"), size = 4, color = "black") +
-  geom_text(aes(x = 255, y = 110, label = "Store 2"), size = 4, color = "black") +
-  geom_text(aes(x = 200, y = -235, label = "Store 3"), size = 4, color = "black") +
-  geom_text(aes(x = -160, y = -135, label = "Store 4"), size = 4, color = "black")
+  geom_text(aes(x = -300, y = 350, label = "Store 1"), size = 7, color = "black") +
+  geom_text(aes(x = 280, y = 140, label = "Store 2"), size = 7, color = "black") +
+  geom_text(aes(x = 220, y = -275, label = "Store 3"), size = 7, color = "black") +
+  geom_text(aes(x = -230, y = -130, label = "Store 4"), size = 7, color = "black")
 
-#jpeg(plot_name, width = 7, height = 6, units = 'in', res = 500)
+#jpeg("Inner_navInOrder.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500)
 p
 #dev.off()
-
-
-plot_name <- paste("recreated_path", "2", ".jpg", sep = "")
-p <- ggplot(recreate2_df_list[[2]], aes(x = pos_X, y = pos_Z, color = time_sec)) +
-  geom_point() +
-  scale_color_gradient(low = "lightblue", high = "darkblue") +
-  labs(x = "X", y = "Y", color = "Time (s)", title = "Recreated Path 2") +
-  theme(plot.title = element_text(hjust = 0.5, size = 16), 
-        axis.title = element_text(size = 13), axis.text = element_text(size = 12), 
-        legend.title = element_text(size = 13), legend.text = element_text(size = 12)) +
-  geom_point(aes(x = -249.37, y = 279.16), size = 5, color = "red") +
-  geom_point(aes(x = 207.3, y = 99.9), size = 5, color = "red") +
-  geom_point(aes(x = 145.79, y = -231.68), size = 5, color = "red") +
-  geom_point(aes(x = -130.43, y = -112.92), size = 5, color = "red") +
-  geom_text(aes(x = -280, y = 300, label = "Store 1"), size = 4, color = "black") +
-  geom_text(aes(x = 255, y = 110, label = "Store 2"), size = 4, color = "black") +
-  geom_text(aes(x = 200, y = -235, label = "Store 3"), size = 4, color = "black") +
-  geom_text(aes(x = -160, y = -135, label = "Store 4"), size = 4, color = "black")
-
-#jpeg(plot_name, width = 7, height = 6, units = 'in', res = 500)
-p
-#dev.off()
-
 
 ##################### Getting the closest points to separate the whole active path into four segments #####################
 
@@ -724,7 +634,7 @@ for (i in seq_along(outer_active_seg_list)) {
   # put info in dataframe
   outer_actual_seg_dist <- rbind(outer_actual_seg_dist, data.frame(segment_distance = actual_seg_dist))
   
-  }
+}
 
 ########### INNER PATH ###########
 
@@ -869,9 +779,9 @@ p <- ggplot(navTest_all_dfs, aes(x = pos_X, y = pos_Z, color = time_sec)) +
   geom_text(aes(x = 220, y = -275, label = "Store 3"), size = 7, color = "black") +
   geom_text(aes(x = -230, y = -130, label = "Store 4"), size = 7, color = "black")
 
-jpeg("all_navTest_trials.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500)
+#jpeg("all_navTest_trials.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500)
 p
-dev.off()
+#dev.off()
 
 ############# Make another dataframe pulling the numbers that Mike generated in the avatar log (has optimal path)
 ############# This data frame combines with the overlapping segment code at the bottom
@@ -976,7 +886,7 @@ for (i in 1:length(inner_passive_df_list)) {
   path_dist <- totDist(inner_passive_df_list[[i]]$pos_X, inner_passive_df_list[[i]]$pos_Z)
   
   # no excess path distance to calculate here
-
+  
   # grab the last value of the time in seconds for path duration
   path_dur <- max(inner_passive_df_list[[i]]$time_sec)
   
@@ -1036,48 +946,48 @@ path_dist_df <- path_dist_df[c(ncol(path_dist_df), 1:ncol(path_dist_df)-1)]
 # write dataframe to an excel file
 
 file_name <- paste(subject_num, "_partial_data.xlsx", sep = "")
-write.xlsx(path_dist_df, file_name, rowNames = FALSE)
+#write.xlsx(path_dist_df, file_name, rowNames = FALSE)
 
 ####################### Make 24 plots for each nav test trial #######################
 
 # loop through a dataframe list to generate a plot for each trial
-for (i in seq_along(navTest_trials_df_list)) {
+#for (i in seq_along(navTest_trials_df_list)) {
   # create the plot title name
-  plot_title <- paste("Navigation Test Trial ", i)
+#  plot_title <- paste("Navigation Test Trial ", i)
   # create the ggplot object for the current data frame
-  gg <- ggplot(navTest_trials_df_list[[i]], aes(x = pos_X, y = pos_Z, color = time_sec)) +
-    geom_point() +
-    scale_color_gradient(low = "lightblue", high = "darkblue") +
-    labs(x = "X", y = "Y", color = "Time (s)", title = plot_title) +
-    theme(plot.title = element_text(hjust = 0.5, size = 20), 
-          axis.title = element_text(size = 13), axis.text = element_text(size = 12), 
-          legend.title = element_text(size = 13), legend.text = element_text(size = 12)) +
-    coord_cartesian(ylim = c(-350,350), xlim = c(-350,350)) +
-    scale_y_continuous(breaks = seq(-400,400,100)) +
-    scale_x_continuous(breaks = seq(-400,400,100)) +
-    geom_point(aes(x = -249.37, y = 279.16), size = 5, color = "red") +
-    geom_point(aes(x = 207.3, y = 99.9), size = 5, color = "red") +
-    geom_point(aes(x = 145.79, y = -231.68), size = 5, color = "red") +
-    geom_point(aes(x = -130.43, y = -112.92), size = 5, color = "red") +
-    geom_text(aes(x = -300, y = 350, label = "Store 1"), size = 7, color = "black") +
-    geom_text(aes(x = 280, y = 140, label = "Store 2"), size = 7, color = "black") +
-    geom_text(aes(x = 220, y = -275, label = "Store 3"), size = 7, color = "black") +
-    geom_text(aes(x = -230, y = -130, label = "Store 4"), size = 7, color = "black")
+#  gg <- ggplot(navTest_trials_df_list[[i]], aes(x = pos_X, y = pos_Z, color = time_sec)) +
+#    geom_point() +
+#    scale_color_gradient(low = "lightblue", high = "darkblue") +
+#    labs(x = "X", y = "Y", color = "Time (s)", title = plot_title) +
+#    theme(plot.title = element_text(hjust = 0.5, size = 20), 
+#          axis.title = element_text(size = 13), axis.text = element_text(size = 12), 
+#          legend.title = element_text(size = 13), legend.text = element_text(size = 12)) +
+#    coord_cartesian(ylim = c(-350,350), xlim = c(-350,350)) +
+#    scale_y_continuous(breaks = seq(-400,400,100)) +
+#    scale_x_continuous(breaks = seq(-400,400,100)) +
+#    geom_point(aes(x = -249.37, y = 279.16), size = 5, color = "red") +
+#    geom_point(aes(x = 207.3, y = 99.9), size = 5, color = "red") +
+#    geom_point(aes(x = 145.79, y = -231.68), size = 5, color = "red") +
+#    geom_point(aes(x = -130.43, y = -112.92), size = 5, color = "red") +
+#    geom_text(aes(x = -300, y = 350, label = "Store 1"), size = 7, color = "black") +
+#    geom_text(aes(x = 280, y = 140, label = "Store 2"), size = 7, color = "black") +
+#    geom_text(aes(x = 220, y = -275, label = "Store 3"), size = 7, color = "black") +
+#    geom_text(aes(x = -230, y = -130, label = "Store 4"), size = 7, color = "black")
   
   # save the plot with a file name based on the index of the data frame
-  ggsave(paste0("SFNnavTest_trial", i, ".jpg"), gg, width = 6.5, height = 5.5, units = 'in', dpi = 500)
-}
+#  ggsave(paste0("SFNnavTest_trial", i, ".jpg"), gg, width = 6.5, height = 5.5, units = 'in', dpi = 500)
+#}
 
 ######################## Calculate overlapping grids ###########################
 
 library(sp)
 library(raster)
 
-# define the extent of the area you want to cover
-xmin <- -400
-xmax <- 400
-ymin <- -400
-ymax <- 400
+# define the extent of the area you want to cover - took from the main experiment
+xmin <- -361
+xmax <- 379
+ymin <- -346
+ymax <- 393
 
 # define the number of cells in the x and y directions
 ncellx <- 37 # 37
@@ -1091,45 +1001,87 @@ area_poly <- SpatialPolygons(list(Polygons(list(Polygon(cbind(c(xmin, xmax, xmax
 # create a SpatialGrid object to represent the grid over the area
 grid <- GridTopology(c(xmin + cellsize/2, ymin + cellsize/2), c(cellsize, cellsize), c(ncellx, ncelly))
 grid_sp <- SpatialGrid(grid)
-
+grid_poly <- as(grid_sp, "SpatialPolygons") # add grid lines, need for making plots
 
 ################### For navigation test trials ###################
 
-# outer path actual (active learning phase)
-outerPath_df <- data.frame(x = outer_active_df_list[[length(outer_active_df_list)]]$pos_X, y = outer_active_df_list[[length(outer_active_df_list)]]$pos_Z)
+# outer path actual (from passive learning phase)
+outerPath_df <- data.frame(x = outer_passive_df_list[[1]]$pos_X, y = outer_passive_df_list[[1]]$pos_Z)
 outerPath_sp <- SpatialPoints(outerPath_df)
 
-# inner path actual (active learning phase)
-innerPath_df <- data.frame(x = inner_active_df_list[[length(inner_active_df_list)]]$pos_X, y = inner_active_df_list[[length(inner_active_df_list)]]$pos_Z)
+# inner path actual (from passive learning phase)
+innerPath_df <- data.frame(x = inner_passive_df_list[[1]]$pos_X, y = inner_passive_df_list[[1]]$pos_Z)
 innerPath_sp <- SpatialPoints(innerPath_df)
 
-# use the "over()" function to find which grids contain the x-y coordinates
+# use the "over()" function to find which grid indices contain the x-y coordinates (all path block indices)
 outerPath_grid <- over(outerPath_sp, grid_sp)
 innerPath_grid <- over(innerPath_sp, grid_sp)
 
-# find the unique numbers for each of the paths representing the total grids the path uses
+# find the unique indices for the paths (unique block indices) - use for plots to make them easier to read
 unique_outerPath_grids <- unique(outerPath_grid)
 unique_innerPath_grids <- unique(innerPath_grid)
 
-# find the total number of grids each path uses
-grid_total_outer <- length(unique_outerPath_grids)
-grid_total_inner <- length(unique_innerPath_grids)
+# find the segments of the inner and outer path that overlap
+inner_outer_overlap <- intersect(unique_outerPath_grids, unique_innerPath_grids)
+
+# take out the overlapping grids from the outer and inner grid numbers (number of nonoverlapping unique blocks) - use for data analyses
+unique_outerPath_grids_no_Overlap <- unique_outerPath_grids[!unique_outerPath_grids %in% inner_outer_overlap]
+unique_innerPath_grids_no_Overlap <- unique_innerPath_grids[!unique_innerPath_grids %in% inner_outer_overlap]
+
+# length of outer and inner paths - for analyses
+total_outer_path_grids <- length(unique_outerPath_grids_no_Overlap)
+total_inner_path_grids <- length(unique_innerPath_grids_no_Overlap)
 
 # plot the grid and the x-y coordinates within the area
-plot(grid_sp)
-plot(outerPath_sp, add = TRUE, col = "red")
+# Define grid title, outlines, and grid lines
+grid_plot_title <- "X,Y Coordinates"
+plot(area_poly, xlim = c(xmin, xmax), ylim = c(ymin, ymax), axes = TRUE, main = grid_plot_title)
+lines(grid_poly, col = "gray", add = TRUE)
+plot(outerPath_sp, add = TRUE, col = "orange", cex = .5)
+#outer_plot <- recordPlot() # capture the current plot
+#jpeg("E:/Nav Stress Data/dissertation/pics/outer_passive_xy_coords.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500) # save the plot
+#replayPlot(outer_plot)
+#dev.off()
 
-plot(grid_sp)
-plot(innerPath_sp, add = TRUE, col = "red")
+# plot the grid for the x-y coordinates within the area
+grid_plot_title <- "X,Y Coordinates"
+plot(area_poly, xlim = c(xmin, xmax), ylim = c(ymin, ymax), axes = TRUE, main = grid_plot_title)
+lines(grid_poly, col = "gray", add = TRUE)
+plot(innerPath_sp, add = TRUE, col = "lightblue", cex = .5)
+#inner_plot <- recordPlot() # capture the current plot
+#jpeg("E:/Nav Stress Data/dissertation/pics/inner_passive_xy_coords.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500) # save the plot
+#replayPlot(inner_plot)
+#dev.off()
 
-# Get the indices of the overlapping grids of the inner and outer paths
-inner_outer_overlap <- intersect(outerPath_grid, innerPath_grid)
-
-# Count the number of overlapping segments for outer and inner path - should be 0
+# Count the number of overlapping segments for outer and inner path - should be 9 because of the store intesection areas
 num_inner_outer_overlap <- length(inner_outer_overlap)
 
 # Create a dataframe to put the data in
 overlap_counts_df <- data.frame(overlap_outer = numeric(), overlap_inner = numeric(), nonoverlapping_grid_num = numeric(), total_grids_trial = numeric(), stringsAsFactors = FALSE)
+
+# Define the group of indices you want to color for making plots
+indices_outer_red <- unique_outerPath_grids
+indices_inner_red <- unique_innerPath_grids
+indices_innerOuterOverlap_gray <- inner_outer_overlap
+
+#  Extract polygons corresponding to the selected indices
+outer_red <- grid_poly[indices_outer_red]
+inner_red <- grid_poly[indices_inner_red]
+innerOuter_overlap_gray <- grid_poly[indices_innerOuterOverlap_gray]
+
+# Define grid title, outlines, and grid lines
+grid_plot_title <- "Grids Traveled"
+plot(area_poly, xlim = c(xmin, xmax), ylim = c(ymin, ymax), axes = TRUE, main = grid_plot_title)
+lines(grid_poly, col = "gray", add = TRUE)
+
+# Plot the selected polygons
+plot(outer_red, col = "orange", add = TRUE)
+plot(inner_red, col = "lightblue", add = TRUE)
+plot(innerOuter_overlap_gray, col = "purple", add = TRUE) # this is purple to make the graph easier to read
+#combo_plot <- recordPlot() # capture the current plot
+#jpeg("E:/Nav Stress Data/dissertation/pics/combo_passive_grids.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500) # save the plot
+#replayPlot(combo_plot)
+#dev.off()
 
 # do a loop to count the overlaps and put it in a dataframe
 
@@ -1142,11 +1094,14 @@ for (i in 1:length(navTest_trials_df_list)) {
   # use the "over()" function to find which grids contain the x-y coordinates
   navTestTrial_grid <- over(navTestTrial_sp, grid_sp)
   
-  # find the unique numbers for each of the paths representing the total grids the path uses
+  # find the unique numbers for each of the paths representing the total grids the path uses # use for making plots
   unique_navTestTrial_grids <- unique(navTestTrial_grid)
   
-  # find the total number of grids each path uses
-  grid_total_trial <- length(unique_navTestTrial_grids)
+  # remove the segments of the inner and outer path that overlap # this is for data analysis
+  no_overlap_unique_navTestTrial_grids <- unique_navTestTrial_grids[!unique_navTestTrial_grids %in% inner_outer_overlap]
+  
+  # find the total number of grids each path uses (without the overlapping grids of course)
+  grid_total_trial <- length(no_overlap_unique_navTestTrial_grids)
   
   # Get the indices of the overlapping grids with outer and inner paths
   overlap_outer_indices <- intersect(outerPath_grid, navTestTrial_grid)
@@ -1165,13 +1120,16 @@ for (i in 1:length(navTest_trials_df_list)) {
 pilot_data_processed <- cbind(log_data, overlap_counts_df)
 
 # write dataframe to an excel file
-file_name <- paste(subject_num, "_navTestTrials.xlsx", sep = "")
+file_name <- paste(subject_num, "_navTestTrials_pilot.xlsx", sep = "")
 write.xlsx(pilot_data_processed, file_name, rowNames = FALSE)
 
 ################### For navInOrder learning trials ###################
 
 # Create a dataframe to put the data in
-overlap_navInOrder_df <- data.frame(trial = character(), overlap_outer = numeric(), overlap_inner = numeric(), total_navInOrder_grids = numeric(), total_actual_path_grids = numeric(), stringsAsFactors = FALSE)
+overlap_navInOrder_df <- data.frame(overlap_outer_correct = numeric(), overlap_outer_incorrect = numeric(), overlap_inner_correct = numeric(), overlap_inner_incorrect = numeric(), 
+                                    novel_grids_outer = numeric(), novel_grids_inner = numeric(),
+                                    total_outer_navInOrder_grids = numeric(), total_inner_navInOrder_grids = numeric(), actual_outer_path_grids = numeric(), actual_inner_path_grids = numeric(), 
+                                    stringsAsFactors = FALSE)
 
 # define outer path
 outer_navInOrder <- data.frame(x = outer_navInOrder_all_dfs$pos_X, y = outer_navInOrder_all_dfs$pos_Z)
@@ -1189,23 +1147,42 @@ inner_navInOrder_grid <- over(inner_navInOrder_sp, grid_sp)
 unique_outer_navInOrder_grids <- unique(outer_navInOrder_grid)
 unique_inner_navInOrder_grids <- unique(inner_navInOrder_grid)
 
-# find the total number of grids each path uses
-grid_total_outer_navInOrder <- length(unique_outer_navInOrder_grids)
-grid_total_inner_navInOrder <- length(unique_inner_navInOrder_grids)
+# take out the overlapping grids from the outer and inner grid numbers (number of nonoverlapping unique blocks) - use for data analyses
+unique_outer_navInOrder_grids_no_Overlap <- unique_outer_navInOrder_grids[!unique_outer_navInOrder_grids %in% inner_outer_overlap]
+unique_inner_navInOrder_grids_no_Overlap <- unique_inner_navInOrder_grids[!unique_inner_navInOrder_grids %in% inner_outer_overlap]
 
-# Get the indices of the overlapping grids of the outer and inner paths
-outer_navInOrder_overlap <- intersect(outer_navInOrder_grid, outerPath_grid)
-inner_navInOrder_overlap <- intersect(inner_navInOrder_grid, innerPath_grid)
+# length for total outer and inner navInOrder grids
+total_outer_navInOrder_path <- length(unique_outer_navInOrder_grids_no_Overlap)
+total_inner_navInOrder_path <- length(unique_inner_navInOrder_grids_no_Overlap)
 
-# Count the number of overlapping segments for outer and inner path - should be 0
-num_outer_navInOrder_overlap <- length(outer_navInOrder_overlap)
-num_inner_navInOrder_overlap <- length(inner_navInOrder_overlap)
+# Get the indices of the outer path overlap with outer and inner grids
+outer_navInOrder_overlap <- intersect(unique_outer_navInOrder_grids, unique_outerPath_grids_no_Overlap)
+outer_navInOrder_innerOverlap <- intersect(unique_outer_navInOrder_grids,unique_innerPath_grids_no_Overlap)
+
+# Get the indices of the inner path overlap with outer and inner grids
+inner_navInOrder_overlap <- intersect(unique_inner_navInOrder_grids, unique_innerPath_grids_no_Overlap)
+inner_navInOrder_outerOverlap <- intersect(unique_inner_navInOrder_grids, unique_outerPath_grids_no_Overlap)
+
+# Count the number of overlapping segments for outer and inner path
+num_outer_correct_navInOrder_overlap <- length(outer_navInOrder_overlap)
+num_outer_incorrect_navInOrder_overlap <- length(outer_navInOrder_innerOverlap)
+num_inner_correct_navInOrder_overlap <- length(inner_navInOrder_overlap)
+num_inner_incorrect_navInOrder_overlap <- length(inner_navInOrder_outerOverlap)
+
+# Get the indices for the novel grids
+indices_novel_outer <- unique_outer_navInOrder_grids_no_Overlap[!unique_outer_navInOrder_grids_no_Overlap %in% unique_outerPath_grids_no_Overlap]
+indices_novel_inner <- unique_inner_navInOrder_grids_no_Overlap[!unique_inner_navInOrder_grids_no_Overlap %in% unique_innerPath_grids_no_Overlap]
+
+# Count the novel grids
+novel_grids_outer_navInOrder <- total_outer_navInOrder_path - num_outer_correct_navInOrder_overlap - num_outer_incorrect_navInOrder_overlap
+novel_grids_inner_navInOrder <- total_inner_navInOrder_path - num_inner_correct_navInOrder_overlap - num_inner_incorrect_navInOrder_overlap
 
 # Add data to the dataframe
-overlap_navInOrder_df <- rbind(overlap_navInOrder_df, data.frame(trial = "outer", overlap_outer = num_outer_navInOrder_overlap, overlap_inner = "N/A", 
-                                                                 total_navInOrder_grids = grid_total_outer_navInOrder, total_actual_path_grids = grid_total_outer))
-overlap_navInOrder_df <- rbind(overlap_navInOrder_df, data.frame(trial = "inner", overlap_outer = "N/A", overlap_inner = num_inner_navInOrder_overlap, 
-                                                                 total_navInOrder_grids = grid_total_inner_navInOrder, total_actual_path_grids = grid_total_inner))
+overlap_navInOrder_df <- rbind(overlap_navInOrder_df, data.frame(overlap_outer_correct = num_outer_correct_navInOrder_overlap, overlap_outer_incorrect = num_outer_incorrect_navInOrder_overlap, 
+                                                                 overlap_inner_correct = num_inner_correct_navInOrder_overlap, overlap_inner_incorrect = num_inner_incorrect_navInOrder_overlap,
+                                                                 novel_grids_outer = novel_grids_outer_navInOrder, novel_grids_inner = novel_grids_inner_navInOrder,
+                                                                 total_outer_navInOrder_grids = total_outer_navInOrder_path, total_inner_navInOrder_grids = total_inner_navInOrder_path, 
+                                                                 actual_outer_path_grids = total_outer_path_grids, actual_inner_path_grids = total_inner_path_grids))
 
 # Add a column for subject ID
 overlap_navInOrder_df$subjectID <- subject_num
@@ -1214,6 +1191,30 @@ overlap_navInOrder_df$subjectID <- subject_num
 overlap_navInOrder_df <- overlap_navInOrder_df[c(ncol(overlap_navInOrder_df), 1:ncol(overlap_navInOrder_df)-1)]
 
 # write dataframe to an excel file
-file_name <- paste(subject_num, "_overlapLearningTrials.xlsx", sep = "")
+file_name <- paste(subject_num, "_pilot_LearningTrialsOverlap.xlsx", sep = "")
 write.xlsx(overlap_navInOrder_df, file_name, rowNames = FALSE)
 
+# Graphs
+# Define the group of indices you want to color for making plots
+indices_outer_navInOrder <- outer_navInOrder_overlap
+indices_inner_navInOrder <- inner_navInOrder_overlap
+indices_novel_outer_navInOrder <- indices_novel_outer
+
+#  Extract polygons corresponding to the selected indices
+outer_navInOrder_polygons <- grid_poly[indices_outer_navInOrder]
+inner_navInOrder_polygons <- grid_poly[indices_inner_navInOrder]
+novel_outer_polygons <- grid_poly[indices_novel_outer_navInOrder]
+
+# Define grid title, outlines, and grid lines
+grid_plot_title <- "Inner and Outer Recreated"
+plot(area_poly, xlim = c(xmin, xmax), ylim = c(ymin, ymax), axes = TRUE, main = grid_plot_title)
+lines(grid_poly, col = "gray", add = TRUE)
+
+# Plot the selected polygons
+plot(outer_navInOrder_polygons, col = "orange", add = TRUE)
+plot(inner_navInOrder_polygons, col = "lightblue", add = TRUE)
+plot(novel_outer_polygons, col = "purple", add = TRUE) # this is purple to make the graph easier to read
+#combo_plot <- recordPlot() # capture the current plot
+#jpeg("E:/Nav Stress Data/dissertation/pics/combo_passive_grids.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500) # save the plot
+#replayPlot(combo_plot)
+#dev.off()
