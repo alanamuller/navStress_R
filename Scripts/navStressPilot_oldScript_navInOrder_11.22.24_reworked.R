@@ -24,12 +24,12 @@ rm(list = ls())
 
 # Set working directory
 # setwd("C:/Users/amuller/Desktop/Alana/UA/HSCL/Stress Shortcuts/stress-shortcuts-collab/data/tmp")
-setwd("E:/Nav Stress Data/pilot") # for hard drive
+setwd("D:/Nav Stress Data/pilot") # for hard drive
 # setwd("C:/Users/almul/OneDrive/Desktop/Alana/UA/HSCL/Stress Shortcuts")
 
 ##### Change this to run next subject
 
-subject_num <- "P001"
+subject_num <- "P022"
 
 # Load the data
 input_file <- paste(subject_num, ".log", sep = "")
@@ -39,7 +39,7 @@ input_data <- paste(readLines(input_file), collapse="\n")
 text <- input_data
 
 # set working directory to save pics - make sure a new folder is created already for the subject's pics
-folder_name <- paste("E:/Nav Stress Data/pilot/pics/", subject_num, sep = "")
+folder_name <- paste("D:/Nav Stress Data/pilot/pics/", subject_num, sep = "")
 
 setwd(folder_name)
 
@@ -136,7 +136,7 @@ p <- ggplot(outer_passive_df_list[[1]], aes(x = pos_X, y = pos_Z, color = time_s
   geom_text(aes(x = -160, y = -135, label = "Store 4"), size = 4, color = "black")
 
 #jpeg("outer_passive1.jpeg", width = 7, height = 6, units = 'in', res = 500)
-p
+#p
 #dev.off()
 
 ############# Extract all lines between TASK_START LearnActivePath ActivePathStart and TASK_END LearnActivePath ActivePathStart
@@ -218,7 +218,7 @@ p <- ggplot(outer_active_df_list[[length(outer_active_df_list)]], aes(x = pos_X,
   geom_text(aes(x = -160, y = -135, label = "Store 4"), size = 4, color = "black")
 
 #jpeg(plot_name, width = 7, height = 6, units = 'in', res = 500)
-p
+#p
 #dev.off()
 
 # Use last trial as the actual whole path length
@@ -312,7 +312,7 @@ p <- ggplot(outer_navInOrder_all_dfs, aes(x = pos_X, y = pos_Z, color = time_sec
   geom_text(aes(x = -230, y = -130, label = "Store 4"), size = 7, color = "black")
 
 #jpeg("outer_navInOrder.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500)
-p
+#p
 #dev.off()
 
 ##################################### EXTRACT INNER PATH: PASSIVE AND ACTIVE LEARNING #####################################
@@ -400,7 +400,7 @@ p <- ggplot(inner_passive_df_list[[1]], aes(x = pos_X, y = pos_Z, color = time_s
   geom_text(aes(x = -160, y = -135, label = "Store 4"), size = 4, color = "black")
 
 #jpeg("inner_passive1.jpeg", width = 7, height = 6, units = 'in', res = 500)
-p
+#p
 #dev.off()
 
 ############# Extract all lines between TASK_START LearnActivePath ActivePathStart and TASK_END LearnActivePath ActivePathStart
@@ -480,7 +480,7 @@ p <- ggplot(inner_active_df_list[[length(inner_active_df_list)]], aes(x = pos_X,
   geom_text(aes(x = -160, y = -135, label = "Store 4"), size = 4, color = "black")
 
 #jpeg(plot_name, width = 7, height = 6, units = 'in', res = 500)
-p
+#p
 #dev.off()
 
 # inner path actual path length
@@ -574,7 +574,7 @@ p <- ggplot(inner_navInOrder_all_dfs, aes(x = pos_X, y = pos_Z, color = time_sec
   geom_text(aes(x = -230, y = -130, label = "Store 4"), size = 7, color = "black")
 
 #jpeg("Inner_navInOrder.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500)
-p
+#p
 #dev.off()
 
 ##################### Getting the closest points to separate the whole active path into four segments #####################
@@ -780,7 +780,7 @@ p <- ggplot(navTest_all_dfs, aes(x = pos_X, y = pos_Z, color = time_sec)) +
   geom_text(aes(x = -230, y = -130, label = "Store 4"), size = 7, color = "black")
 
 #jpeg("all_navTest_trials.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500)
-p
+#p
 #dev.off()
 
 ############# Make another dataframe pulling the numbers that Mike generated in the avatar log (has optimal path)
@@ -945,7 +945,7 @@ path_dist_df <- path_dist_df[c(ncol(path_dist_df), 1:ncol(path_dist_df)-1)]
 
 # write dataframe to an excel file
 
-file_name <- paste(subject_num, "_partial_data.xlsx", sep = "")
+#file_name <- paste(subject_num, "_partial_data.xlsx", sep = "")
 #write.xlsx(path_dist_df, file_name, rowNames = FALSE)
 
 ####################### Make 24 plots for each nav test trial #######################
@@ -1034,20 +1034,20 @@ total_inner_path_grids <- length(unique_innerPath_grids_no_Overlap)
 
 # plot the grid and the x-y coordinates within the area
 # Define grid title, outlines, and grid lines
-grid_plot_title <- "X,Y Coordinates"
-plot(area_poly, xlim = c(xmin, xmax), ylim = c(ymin, ymax), axes = TRUE, main = grid_plot_title)
-lines(grid_poly, col = "gray", add = TRUE)
-plot(outerPath_sp, add = TRUE, col = "orange", cex = .5)
+#grid_plot_title <- "X,Y Coordinates"
+#plot(area_poly, xlim = c(xmin, xmax), ylim = c(ymin, ymax), axes = TRUE, main = grid_plot_title)
+#lines(grid_poly, col = "gray", add = TRUE)
+#plot(outerPath_sp, add = TRUE, col = "orange", cex = .5)
 #outer_plot <- recordPlot() # capture the current plot
 #jpeg("E:/Nav Stress Data/dissertation/pics/outer_passive_xy_coords.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500) # save the plot
 #replayPlot(outer_plot)
 #dev.off()
 
 # plot the grid for the x-y coordinates within the area
-grid_plot_title <- "X,Y Coordinates"
-plot(area_poly, xlim = c(xmin, xmax), ylim = c(ymin, ymax), axes = TRUE, main = grid_plot_title)
-lines(grid_poly, col = "gray", add = TRUE)
-plot(innerPath_sp, add = TRUE, col = "lightblue", cex = .5)
+#grid_plot_title <- "X,Y Coordinates"
+#plot(area_poly, xlim = c(xmin, xmax), ylim = c(ymin, ymax), axes = TRUE, main = grid_plot_title)
+#lines(grid_poly, col = "gray", add = TRUE)
+#plot(innerPath_sp, add = TRUE, col = "lightblue", cex = .5)
 #inner_plot <- recordPlot() # capture the current plot
 #jpeg("E:/Nav Stress Data/dissertation/pics/inner_passive_xy_coords.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500) # save the plot
 #replayPlot(inner_plot)
@@ -1070,14 +1070,14 @@ inner_red <- grid_poly[indices_inner_red]
 innerOuter_overlap_gray <- grid_poly[indices_innerOuterOverlap_gray]
 
 # Define grid title, outlines, and grid lines
-grid_plot_title <- "Grids Traveled"
-plot(area_poly, xlim = c(xmin, xmax), ylim = c(ymin, ymax), axes = TRUE, main = grid_plot_title)
-lines(grid_poly, col = "gray", add = TRUE)
+#grid_plot_title <- "Grids Traveled"
+#plot(area_poly, xlim = c(xmin, xmax), ylim = c(ymin, ymax), axes = TRUE, main = grid_plot_title)
+#lines(grid_poly, col = "gray", add = TRUE)
 
 # Plot the selected polygons
-plot(outer_red, col = "orange", add = TRUE)
-plot(inner_red, col = "lightblue", add = TRUE)
-plot(innerOuter_overlap_gray, col = "purple", add = TRUE) # this is purple to make the graph easier to read
+#plot(outer_red, col = "orange", add = TRUE)
+#plot(inner_red, col = "lightblue", add = TRUE)
+#plot(innerOuter_overlap_gray, col = "purple", add = TRUE) # this is purple to make the graph easier to read
 #combo_plot <- recordPlot() # capture the current plot
 #jpeg("E:/Nav Stress Data/dissertation/pics/combo_passive_grids.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500) # save the plot
 #replayPlot(combo_plot)
@@ -1195,26 +1195,43 @@ file_name <- paste(subject_num, "_pilot_LearningTrialsOverlap.xlsx", sep = "")
 write.xlsx(overlap_navInOrder_df, file_name, rowNames = FALSE)
 
 # Graphs
+
 # Define the group of indices you want to color for making plots
 indices_outer_navInOrder <- outer_navInOrder_overlap
 indices_inner_navInOrder <- inner_navInOrder_overlap
 indices_novel_outer_navInOrder <- indices_novel_outer
+indices_novel_inner_navInOrder <- indices_novel_inner
 
 #  Extract polygons corresponding to the selected indices
 outer_navInOrder_polygons <- grid_poly[indices_outer_navInOrder]
 inner_navInOrder_polygons <- grid_poly[indices_inner_navInOrder]
 novel_outer_polygons <- grid_poly[indices_novel_outer_navInOrder]
+novel_inner_polygons <- grid_poly[indices_novel_inner_navInOrder]
 
-# Define grid title, outlines, and grid lines
-grid_plot_title <- "Inner and Outer Recreated"
+# Check Outer navInOrder 
+#Define grid title, outlines, and grid lines
+grid_plot_title <- "Outer Recreated"
 plot(area_poly, xlim = c(xmin, xmax), ylim = c(ymin, ymax), axes = TRUE, main = grid_plot_title)
 lines(grid_poly, col = "gray", add = TRUE)
-
 # Plot the selected polygons
-plot(outer_navInOrder_polygons, col = "orange", add = TRUE)
-plot(inner_navInOrder_polygons, col = "lightblue", add = TRUE)
-plot(novel_outer_polygons, col = "purple", add = TRUE) # this is purple to make the graph easier to read
-#combo_plot <- recordPlot() # capture the current plot
-#jpeg("E:/Nav Stress Data/dissertation/pics/combo_passive_grids.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500) # save the plot
-#replayPlot(combo_plot)
-#dev.off()
+plot(outer_navInOrder_sp, add = TRUE, col = "orange", cex = .5) # xy coordinates
+plot(outer_navInOrder_polygons, col = "orange", add = TRUE) # outer overlapping grids
+plot(novel_outer_polygons, col = "purple", add = TRUE) # novel grids
+outer_navInOrder_plot <- recordPlot() # capture the current plot
+jpeg("outer_navInOrder_grids.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500) # save the plot
+replayPlot(outer_navInOrder_plot)
+dev.off()
+
+# Check Inner navInOrder 
+#Define grid title, outlines, and grid lines
+grid_plot_title <- "Inner Recreated"
+plot(area_poly, xlim = c(xmin, xmax), ylim = c(ymin, ymax), axes = TRUE, main = grid_plot_title)
+lines(grid_poly, col = "gray", add = TRUE)
+# Plot the selected polygons
+plot(inner_navInOrder_sp, add = TRUE, col = "orange", cex = .5) # xy coordinates
+plot(inner_navInOrder_polygons, col = "lightblue", add = TRUE) # overlapping inner grids
+plot(novel_inner_polygons, col = "violet", add = TRUE) # novel grids
+inner_navInOrder_plot <- recordPlot() # capture the current plot
+jpeg("inner_navInOrder_grids.jpeg", width = 6.5, height = 5.5, units = 'in', res = 500) # save the plot
+replayPlot(inner_navInOrder_plot)
+dev.off()
