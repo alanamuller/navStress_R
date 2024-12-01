@@ -29,7 +29,7 @@ setwd("D:/Nav Stress Data/pilot") # for hard drive
 
 ##### Change this to run next subject
 
-subject_num <- "P022"
+subject_num <- "P001"
 
 # Load the data
 input_file <- paste(subject_num, ".log", sep = "")

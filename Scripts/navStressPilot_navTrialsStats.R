@@ -11,7 +11,7 @@ library(patchwork)
 rm(list = ls())
 
 # Set the directory where the Excel files are stored
-setwd("E:/Nav Stress Data")
+setwd("D:/Nav Stress Data")
 
 import_data <- read_excel("pilot_navTestTrials.xlsx", sheet = "Sheet 1")
 
@@ -24,7 +24,7 @@ df <- df %>%
 
 ### Delete the trials that have a duration less than 1 because those are mistakes
 # Count trials to be deleted
-count <- sum(df$Navigate_duration < 1)
+count <- sum(df$Navigate_duration < 1) # 20
 
 # Delete those rows
 cd <- subset(df, Navigate_duration > 1) # cd stands for "clean data"
@@ -36,7 +36,7 @@ hist(df$Navigate_excessPath)
 hist(df$Navigate_duration)
 hist(df$overlap_outer)
 hist(df$overlap_inner)
-hist(df$total_grids_trial)
+hist(df$total_grids)
 
 # Make column for overlap percentages
 cd$overlap_outer_percent <- (cd$overlap_outer/cd$total_grids)*100
@@ -51,7 +51,7 @@ navExcess_mean <- mean(cd$Navigate_excessPath, na.rm = TRUE)
 navExcess_sd <- sd(cd$Navigate_excessPath, na.rm = TRUE)
 
 count <- sum(cd$Navigate_excessPath < (navExcess_mean - (3*navExcess_sd))) # none
-count <- sum(cd$Navigate_excessPath > (navExcess_mean + (3*navExcess_sd))) # 9
+count <- sum(cd$Navigate_excessPath > (navExcess_mean + (3*navExcess_sd))) # 0
 
 cd <- subset(cd, !Navigate_excessPath > (navExcess_mean + (3*navExcess_sd)))
 
@@ -61,7 +61,7 @@ actualPath_mean <- mean(cd$Navigate_actualPath, na.rm = TRUE)
 actualPath_sd <- sd(cd$Navigate_actualPath, na.rm = TRUE)
 
 count <- sum(cd$Navigate_actualPath < (actualPath_mean - (3*actualPath_sd))) # none
-count <- sum(cd$Navigate_actualPath > (actualPath_mean + (3*actualPath_sd))) # 9
+count <- sum(cd$Navigate_actualPath > (actualPath_mean + (3*actualPath_sd))) # 5
 
 actualPath_cd <- subset(cd, !Navigate_actualPath > (actualPath_mean + (3*actualPath_sd)))
 
@@ -73,7 +73,7 @@ actualPath_cd <- subset(cd, !Navigate_actualPath > (actualPath_mean + (3*actualP
 #setwd("E:/Nav Stress Data/pics/SFN2023")
 
 # Navigation duration by block
-nav_dur <- cd %>%
+nav_dur <- actualPath_cd %>%
   group_by(subjectID, block, path_type) %>%
   summarise(
     mean_nav_dur = mean(Navigate_duration, na.rm = TRUE),
@@ -83,7 +83,7 @@ nav_dur <- cd %>%
 ### Plots by subject to get a look at how each did
 
 # excess path
-ggplot(cd, aes(x = subjectID, y = Navigate_excessPath)) +
+ggplot(actualPath_cd, aes(x = subjectID, y = Navigate_excessPath)) +
   geom_boxplot(outliers = FALSE) + 
   geom_jitter(color="gray", size=1, width = 0.15) +
   theme_classic() +
@@ -93,14 +93,14 @@ ggplot(cd, aes(x = subjectID, y = Navigate_excessPath)) +
 # excess path by route first learned
 
 # split by which path taught first
-plot_left <- ggplot(subset(cd, first_route_learned == "Outer"), aes(x = subjectID, y = Navigate_excessPath)) +
+plot_left <- ggplot(subset(actualPath_cd, first_route_learned == "Outer"), aes(x = subjectID, y = Navigate_excessPath)) +
   geom_boxplot() + labs(title = "Outer Route Learned First", x = "Subject Number", y = "Excess Path") + 
   theme_classic() + guides(fill = FALSE) +
   theme(plot.title = element_text(hjust = 0.5, size = 20), 
         axis.title = element_text(size = 18), axis.text = element_text(size = 15), 
         legend.title = element_text(size = 18), legend.text = element_text(size = 15))
 
-plot_right <- ggplot(subset(cd, first_route_learned == "Inner"), aes(x = subjectID, y = Navigate_excessPath)) +
+plot_right <- ggplot(subset(actualPath_cd, first_route_learned == "Inner"), aes(x = subjectID, y = Navigate_excessPath)) +
   geom_boxplot() + labs(title = "Inner Route Learned First", x = "Subject Number", y = "Excess Path") + 
   theme_classic() + guides(fill = FALSE) +
   theme(plot.title = element_text(hjust = 0.5, size = 20), 
@@ -111,8 +111,64 @@ excessPath_subj <- grid.arrange(plot_left, plot_right, ncol=2)
 
 #ggsave("excessPath_subj.jpeg", excessPath_subj ,width = 12, height = 6, units = 'in', dpi = 500)
 
+# path familiarity and overlap percent
+
+smData <- actualPath_cd %>%
+  select(subjectID, block, trial, outer_reps, 
+         Navigate_excessPath, overlap_outer_percent, overlap_inner_percent, nonoverlap_percent)
+
+# make outer_reps numeric or it won't average
+smData$outer_reps <- as.character(smData$outer_reps) # need to change to character first or the data gets screwed up
+smData$outer_reps <- as.numeric(smData$outer_reps)
+
+# Collapse across trials
+groupSummary <- smData %>%
+  group_by(subjectID) %>%
+  summarize(
+    outer_rep_num = mean(outer_reps, na.rm = TRUE),
+    mean_overlap_outer_percent = mean(overlap_outer_percent),
+    mean_overlap_inner_percent = mean(overlap_inner_percent),
+    mean_nonoverlap_percent = mean(nonoverlap_percent)
+  )
+
+# make the data long format
+groupSummary_long <- pivot_longer(cols = !c(subjectID, outer_rep_num), names_to = "overlap_type", values_to = "percent", data = groupSummary)
+
+# make another column that labels the familiar and not familiar
+groupSummary_long <- groupSummary_long %>%
+  mutate(familiarity = case_when(
+    
+  ))
+
+groupSummary_long <- groupSummary_long %>%
+  mutate(pathFam = case_when(
+    outer_rep_num == "4" ~ "outer_more_familiar",
+    outer_rep_num == "6" ~ "outer_more_familiar",
+    TRUE ~ "inner_more_familiar"
+  ))
+
+familiarity_plot <- ggplot(groupSummary_long, aes(x = overlap_type, y = percent, color = pathFam)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_point(position = position_jitterdodge()) +
+  labs(x = "Overlap Type", y = "Percent Overlap") +
+  scale_x_discrete(labels = c("Novel", "Inner", "Outer")) + 
+  scale_color_discrete(name = "More Familiar", labels = c("Inner", "Outer")) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 20), 
+        axis.text.y = element_text(size = 20), 
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size = 20))
+#jpeg("D:/Nav Stress Data/dissertation/pics/pilot_nav_fam.jpeg", width = 6, height = 5, units = 'in', res = 500)
+familiarity_plot
+#dev.off()
+
+
+
+
 # nav duration
-ggplot(cd, aes(x = subjectID, y = Navigate_duration)) +
+ggplot(actualPath_cd, aes(x = subjectID, y = Navigate_duration)) +
   geom_boxplot() + 
   geom_jitter(color="gray", size=1, width = 0.15) +
   theme_classic() +
@@ -120,14 +176,14 @@ ggplot(cd, aes(x = subjectID, y = Navigate_duration)) +
   scale_fill_brewer(palette = "Paired")
 
 # split by which path taught first
-plot_left <- ggplot(subset(cd, first_route_learned == "Outer"), aes(x = subjectID, y = Navigate_duration)) +
+plot_left <- ggplot(subset(actualPath_cd, first_route_learned == "Outer"), aes(x = subjectID, y = Navigate_duration)) +
   geom_boxplot() + labs(title = "Outer Route Learned First", x = "Subject Number", y = "Duration") + 
   theme_classic() + guides(fill = FALSE) +
   theme(plot.title = element_text(hjust = 0.5, size = 20), 
         axis.title = element_text(size = 18), axis.text = element_text(size = 15), 
         legend.title = element_text(size = 18), legend.text = element_text(size = 15))
 
-plot_right <- ggplot(subset(cd, first_route_learned == "Inner"), aes(x = subjectID, y = Navigate_duration)) +
+plot_right <- ggplot(subset(actualPath_cd, first_route_learned == "Inner"), aes(x = subjectID, y = Navigate_duration)) +
   geom_boxplot() + labs(title = "Inner Route Learned First", x = "Subject Number", y = "Duration") + 
   theme_classic() + guides(fill = FALSE) +
   theme(plot.title = element_text(hjust = 0.5, size = 20), 
@@ -139,11 +195,11 @@ duration_subj <- grid.arrange(plot_left, plot_right, ncol=2)
 #ggsave("duration_subj.jpeg", duration_subj ,width = 12, height = 6, units = 'in', dpi = 500)
 
 # navigation excess path and duration correlation
-cor(cd$Navigate_duration, cd$Navigate_excessPath)
-plot(cd$Navigate_duration, cd$Navigate_excessPath)
+cor(actualPath_cd$Navigate_duration, actualPath_cd$Navigate_excessPath)
+plot(actualPath_cd$Navigate_duration, actualPath_cd$Navigate_excessPath)
 
 # overlap outer path
-ggplot(cd, aes(x = subjectID, y = overlap_outer)) +
+ggplot(actualPath_cd, aes(x = subjectID, y = overlap_outer)) +
   geom_boxplot() + 
   geom_jitter(color="gray", size=1, width = 0.15) +
   theme_classic() +
@@ -151,7 +207,7 @@ ggplot(cd, aes(x = subjectID, y = overlap_outer)) +
   scale_fill_brewer(palette = "Paired")
 
 # overlap inner path
-ggplot(cd, aes(x = subjectID, y = overlap_inner)) +
+ggplot(actualPath_cd, aes(x = subjectID, y = overlap_inner)) +
   geom_boxplot() + 
   geom_jitter(color="gray", size=1, width = 0.15) +
   theme_classic() +
@@ -163,7 +219,7 @@ ggplot(cd, aes(x = subjectID, y = overlap_inner)) +
 ##### Overlap dv analyses
 
 # outer and inner path on same plot
-overlap_df <- cd[c("subjectID", "overlap_outer_percent", "overlap_inner_percent", "nonoverlap_percent", "path_type", "first_route_learned", "outer_reps", "Navigate_excessPath")]
+overlap_df <- actualPath_cd[c("subjectID", "overlap_outer_percent", "overlap_inner_percent", "nonoverlap_percent", "path_type", "first_route_learned", "outer_reps", "Navigate_excessPath")]
 overlap_melt <- melt(overlap_df, id.vars =  c("subjectID", "path_type", "first_route_learned", "outer_reps", "Navigate_excessPath"), 
                      variable.name = "inner_outer_non", value.name = "overlap_percent")
 
@@ -359,7 +415,7 @@ path_type_firstLearned <- as.data.frame(path_type_firstLearned)
 
 res.aov <- anova_test(data = path_type_firstLearned, dv = mean_overlap_percent, wid = subjectID, 
                       within = c(inner_outer_non, path_type), between = first_route_learned)
-get_anova_table(res.aov) # everything is sig
+get_anova_table(res.aov) # lots of sig
 
 
 #ggsave("overlap_pathType.jpeg", overlap_pathType ,width = 9, height = 6, units = 'in', dpi = 500)
@@ -449,7 +505,7 @@ navExcess <- ggplot(ap_df, aes(x = first_route_learned, y = mean_nav_actualPath,
         legend.title = element_text(size = 18), legend.text = element_text(size = 15),
         legend.position = "top")
 
-ggsave("navExcess.jpeg", navExcess ,width = 6, height = 6, units = 'in', dpi = 500)
+#ggsave("navExcess.jpeg", navExcess ,width = 6, height = 6, units = 'in', dpi = 500)
 
 
 ##### Stats
@@ -491,3 +547,4 @@ pwc <- overlap_melt %>%
     p.adjust.method = "bonferroni"
   )
 pwc
+

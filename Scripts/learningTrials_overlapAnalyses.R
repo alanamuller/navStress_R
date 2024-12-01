@@ -24,9 +24,9 @@ setwd("E:/Nav Stress Data/") # set working directory
 myData <- read.csv("combined_recreatePathsLogData.csv") # read in file
 
 # add column with percentages of how much of the path participants recreated (not including grids shared between inner and outer paths)
-# City 1 <- outer: 124; inner: 110
-# City 2 <- outer: 127; inner: 107
-# City 3 <- outer: 136; inner: 111
+# City 1 <- outer: 124; inner: 110, novel: 441
+# City 2 <- outer: 127; inner: 107, novel: 441
+# City 3 <- outer: 136; inner: 111, novel: 440
 
 # calculate the percentage of grid overlap for outer and inner paths
 # total grid numbers have been counted and don't include grids shared between inner and outer paths
