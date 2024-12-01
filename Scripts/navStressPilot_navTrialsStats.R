@@ -7,6 +7,7 @@ library(ez)
 library(ggpubr)
 library(rstatix)
 library(patchwork)
+library(BayesFactor)
 
 rm(list = ls())
 
@@ -159,12 +160,29 @@ familiarity_plot <- ggplot(groupSummary_long, aes(x = overlap_type, y = percent,
         axis.title.x = element_text(size = 20),
         axis.title.y = element_text(size = 20),
         legend.text = element_text(size = 20),
-        legend.title = element_text(size = 20))
-#jpeg("D:/Nav Stress Data/dissertation/pics/pilot_nav_fam.jpeg", width = 6, height = 5, units = 'in', res = 500)
+        legend.title = element_text(size = 20), 
+        legend.position = "top")
+jpeg("D:/Nav Stress Data/dissertation/pics/pilot_nav_fam.jpeg", width = 4.55, height = 5, units = 'in', res = 500)
 familiarity_plot
-#dev.off()
+dev.off()
 
+##### # 2x3 mixed repeated measures ANOVA
+fam.aov <- anova_test(data = groupSummary_long, dv = percent, wid = subjectID,
+                         within = overlap_type, between = pathFam)
+get_anova_table(fam.aov) # overlap_type is sig
 
+# simple main effect
+pwc <- groupSummary_long %>%
+  pairwise_t_test(percent ~ overlap_type, p.adjust.method = "bonferroni")
+pwc
+
+# Bayes factor for this ANOVA
+groupSummary_long <- as.data.frame(groupSummary_long)
+groupSummary_long$overlap_type <- as.factor(groupSummary_long$overlap_type)
+groupSummary_long$pathFam <- as.factor(groupSummary_long$pathFam)
+bayes_rm <- anovaBF(percent ~ overlap_type*pathFam + subjectID, data = groupSummary_long, whichRandom = "subjectID")
+bayes_rm
+plot(bayes_rm)
 
 
 # nav duration
