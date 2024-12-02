@@ -137,22 +137,22 @@ groupSummary_long <- pivot_longer(cols = !c(subjectID, outer_rep_num), names_to 
 
 # make another column that labels the familiar and not familiar
 groupSummary_long <- groupSummary_long %>%
-  mutate(familiarity = case_when(
-    
-  ))
-
-groupSummary_long <- groupSummary_long %>%
   mutate(pathFam = case_when(
     outer_rep_num == "4" ~ "outer_more_familiar",
     outer_rep_num == "6" ~ "outer_more_familiar",
     TRUE ~ "inner_more_familiar"
   ))
 
+# reorder overlap_type factors
+groupSummary_long$overlap_type <- factor(groupSummary_long$overlap_type, 
+                                         levels = c("mean_overlap_outer_percent", "mean_overlap_inner_percent", 
+                                                    "mean_nonoverlap_percent"))
+
 familiarity_plot <- ggplot(groupSummary_long, aes(x = overlap_type, y = percent, color = pathFam)) +
   geom_boxplot(outliers = FALSE) +
   geom_point(position = position_jitterdodge()) +
   labs(x = "Overlap Type", y = "Percent Overlap") +
-  scale_x_discrete(labels = c("Novel", "Inner", "Outer")) + 
+  scale_x_discrete(labels = c("Outer", "Inner", "Novel")) + 
   scale_color_discrete(name = "More Familiar", labels = c("Inner", "Outer")) +
   theme_classic() +
   theme(axis.text.x = element_text(size = 20), 
@@ -162,13 +162,13 @@ familiarity_plot <- ggplot(groupSummary_long, aes(x = overlap_type, y = percent,
         legend.text = element_text(size = 20),
         legend.title = element_text(size = 20), 
         legend.position = "top")
-jpeg("D:/Nav Stress Data/dissertation/pics/pilot_nav_fam.jpeg", width = 4.55, height = 5, units = 'in', res = 500)
+#jpeg("D:/Nav Stress Data/dissertation/pics/pilot_nav_fam.jpeg", width = 5, height = 6, units = 'in', res = 500)
 familiarity_plot
-dev.off()
+#dev.off()
 
 ##### # 2x3 mixed repeated measures ANOVA
 fam.aov <- anova_test(data = groupSummary_long, dv = percent, wid = subjectID,
-                         within = overlap_type, between = pathFam)
+                         within = overlap_type, between = pathFam, detailed = TRUE)
 get_anova_table(fam.aov) # overlap_type is sig
 
 # simple main effect
@@ -327,7 +327,7 @@ avg_overlap_type <- avg_plot_left + avg_plot_right +
   plot_layout(ncol = 2, guides = "collect") & 
   theme(legend.position = "right")
 
-#jpeg("E:/Nav Stress Data/dissertation/pics/pilot_avg_overlap_type.jpeg", width = 8, height = 6, units = 'in', res = 500)
+#jpeg("D:/Nav Stress Data/dissertation/pics/pilot_avg_overlap_type.jpeg", width = 6.5, height = 4, units = 'in', res = 500)
 avg_overlap_type
 #dev.off()
 
@@ -335,15 +335,31 @@ avg_overlap_type
 collapse_subj <- as.data.frame(collapse_subj)
 
 res.aov <- anova_test(data = collapse_subj, dv = mean_overlap_percent, wid = subjectID, 
-                      within = inner_outer_non, between = first_route_learned)
-get_anova_table(res.aov) # everything is sig
+                      within = inner_outer_non, between = first_route_learned, detailed = TRUE)
+get_anova_table(res.aov) # inner_outer_non and interaction are sig
 
-mod <- aov(mean_overlap_percent ~ inner_outer_non * first_route_learned,
-           data = collapse_subj
-)
+# simple main effect of route learned first
+one.way <- collapse_subj %>%
+  group_by(inner_outer_non) %>%
+  anova_test(dv = mean_overlap_percent, wid = subjectID, between = first_route_learned) %>%
+  get_anova_table() %>%
+  adjust_pvalue(method = "bonferroni")
+one.way
 
-# print results
-summary(mod)
+# simple main effect of overlap type
+one.way <- collapse_subj %>%
+  group_by(first_route_learned) %>%
+  anova_test(dv = mean_overlap_percent, wid = subjectID, within = inner_outer_non) %>%
+  get_anova_table() %>%
+  adjust_pvalue(method = "bonferroni")
+one.way
+
+# pairwise comparisons for outer route learned first
+pwc <- collapse_subj %>%
+  group_by(first_route_learned) %>%
+  pairwise_t_test(mean_overlap_percent ~ inner_outer_non, p.adjust.method = "bonferroni")
+pwc
+
 
 # Uncomment below if you need to change the labels in the legend 
 #scale_fill_discrete(labels = c("Outer Percent", "Inner Percent", "Nonoverlap Percent"))
@@ -423,7 +439,7 @@ overlap_pathType_pathLearned <- plot_left + plot_right +
   plot_layout(ncol = 2, guides = "collect") & 
   theme(legend.position = "right")
 
-#jpeg("E:/Nav Stress Data/dissertation/pics/pilot_overlap_pathType_pathLearned.jpeg", width = 9, height = 6, units = 'in', res = 500)
+#jpeg("D:/Nav Stress Data/dissertation/pics/pilot_overlap_pathType_pathLearned.jpeg", width = 7, height = 4, units = 'in', res = 500)
 overlap_pathType_pathLearned
 #dev.off()
 
@@ -432,9 +448,28 @@ overlap_pathType_pathLearned
 path_type_firstLearned <- as.data.frame(path_type_firstLearned)
 
 res.aov <- anova_test(data = path_type_firstLearned, dv = mean_overlap_percent, wid = subjectID, 
-                      within = c(inner_outer_non, path_type), between = first_route_learned)
-get_anova_table(res.aov) # lots of sig
+                      within = c(inner_outer_non, path_type), between = first_route_learned, detailed = TRUE)
+get_anova_table(res.aov) # inner_outer_non, first_learned:inner_outer_non, inner_outer_non:path_type sig (1 main effect and 2 interactions)
 
+# Simple main effect: first route learned x inner outer non
+
+one.way.1 <- path_type_firstLearned %>%
+  group_by(inner_outer_non) %>%
+  anova_test(dv = mean_overlap_percent, wid = subjectID, between = first_route_learned) %>%
+  get_anova_table() %>%
+  adjust_pvalue(method = "bonferroni")
+one.way.1
+
+# try adding a column of consecutive numbers to try to fix the error
+path_type_firstLearned <- path_type_firstLearned %>%
+  mutate(row_number = row_number())
+
+one.way.2 <- path_type_firstLearned %>%
+  group_by(first_route_learned) %>%
+  anova_test(dv = mean_overlap_percent, wid = subjectID, within = inner_outer_non) %>%
+  get_anova_table() %>%
+  adjust_pvalue(method = "bonferroni")
+one.way.2
 
 #ggsave("overlap_pathType.jpeg", overlap_pathType ,width = 9, height = 6, units = 'in', dpi = 500)
 
