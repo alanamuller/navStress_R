@@ -12,7 +12,7 @@ library(BayesFactor)
 rm(list = ls())
 
 # Set the directory where the Excel files are stored
-setwd("D:/Nav Stress Data")
+setwd("E:/Nav Stress Data")
 
 import_data <- read_excel("pilot_navTestTrials.xlsx", sheet = "Sheet 1")
 
@@ -151,7 +151,7 @@ groupSummary_long$overlap_type <- factor(groupSummary_long$overlap_type,
 familiarity_plot <- ggplot(groupSummary_long, aes(x = overlap_type, y = percent, color = pathFam)) +
   geom_boxplot(outliers = FALSE) +
   geom_point(position = position_jitterdodge()) +
-  labs(x = "Overlap Type", y = "Percent Overlap") +
+  labs(x = "Overlap Type", y = "Overlap Percent") +
   scale_x_discrete(labels = c("Outer", "Inner", "Novel")) + 
   scale_color_discrete(name = "More Familiar", labels = c("Inner", "Outer")) +
   theme_classic() +
@@ -162,7 +162,7 @@ familiarity_plot <- ggplot(groupSummary_long, aes(x = overlap_type, y = percent,
         legend.text = element_text(size = 20),
         legend.title = element_text(size = 20), 
         legend.position = "top")
-#jpeg("D:/Nav Stress Data/dissertation/pics/pilot_nav_fam.jpeg", width = 5, height = 6, units = 'in', res = 500)
+#jpeg("E:/Nav Stress Data/dissertation/pics/pilot_nav_fam.jpeg", width = 5.5, height = 5, units = 'in', res = 500)
 familiarity_plot
 #dev.off()
 
@@ -330,6 +330,26 @@ avg_overlap_type <- avg_plot_left + avg_plot_right +
 #jpeg("D:/Nav Stress Data/dissertation/pics/pilot_avg_overlap_type.jpeg", width = 6.5, height = 4, units = 'in', res = 500)
 avg_overlap_type
 #dev.off()
+
+# a better plot
+recencyLearned_plot <- ggplot(collapse_subj, aes(x = inner_outer_non, y = mean_overlap_percent, color = first_route_learned)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_point(position = position_jitterdodge()) +
+  labs(x = "Overlap Type", y = "Overlap Percent") +
+  scale_x_discrete(labels = c("Outer", "Inner", "Novel")) + 
+  scale_color_discrete(name = "First Route Learned", labels = c("Inner", "Outer")) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 20), 
+        axis.text.y = element_text(size = 20), 
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size = 20), 
+        legend.position = "top")
+#jpeg("E:/Nav Stress Data/dissertation/pics/pilot_nav_recency.jpeg", width = 5.5, height = 5, units = 'in', res = 500)
+recencyLearned_plot
+#dev.off()
+
 
 # run the 2x3 anova (route learned first: inner, outer) (overlap type: outer, inner, novel)
 collapse_subj <- as.data.frame(collapse_subj)
