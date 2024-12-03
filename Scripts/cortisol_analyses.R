@@ -12,7 +12,7 @@ library(plotrix)
 rm(list = ls())
 
 # Set working directory
-setwd("E:/Nav Stress Data/Salimetrics reports") # from hard drive
+setwd("D:/Nav Stress Data/Salimetrics reports") # from hard drive
 
 # Enter the data - for now only analyze the complete cases
 #samples9Data <- readxl::read_excel("saliva_data_bySubject.xlsx", sheet = "9samples")
@@ -152,29 +152,6 @@ cort_graph1 <- ggplot(data = whole_cort, aes(x=factor(time, level = level_order)
 cort_graph1
 #dev.off()
 
-# Plot with all participant separated by condition and time
-cort_graph1 <- ggplot(data = whole_cort, aes(x=factor(time, level = level_order), y=log_cort)) +
-  geom_boxplot(outliers = FALSE) +
-  geom_point(color = "gray60") +
-  stat_summary(fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
-  geom_line(aes(group = subjNum), color = "gray80", alpha = 0.7) +
-  facet_wrap(vars(condition), labeller = labeller(condition = cond.labs)) +
-  labs(x = "Time", y = " Log Cortisol (nmol/L)" ) +
-  theme_classic() +
-  scale_x_discrete(labels = c("Pre", "Post1", "Post15", "Post30")) +
-  theme(axis.text.x = element_text(size = 13), 
-        axis.text.y = element_text(size = 17), 
-        axis.title.x = element_text(size = 17),
-        axis.title.y = element_text(size = 17),
-        legend.text = element_text(size = 17),
-        legend.title = element_text(size = 17), 
-        strip.text = element_text(size = 13),
-        panel.border = element_rect(color = "black", fill = NA, linewidth = 1))
-
-#jpeg("E:/Nav Stress Data/dissertation/pics/log_cortisol_allData.jpeg", width = 9, height = 5.75, units = 'in', res = 500)
-cort_graph1
-#dev.off()
-
 ##### Take out the people that didn't finish the cold pressor task
 
 # Participants to exclude
@@ -185,44 +162,45 @@ good_cp_data <- all_data %>%
 
 # Plot and ANOVA
 
-# anova
+# 3x4 within-subjects anova
 res.aov <- anova_test(data = good_cp_data, dv = log_cort, wid = subjNum, within = c(condition,time))
 get_anova_table(res.aov) # condition and condition*time interaction sig
 
 # testing simple main effects
 
 # testing effect of condition at every time point
-one.way_complete <- good_cp_data %>%
+one.way.condition <- good_cp_data %>%
   group_by(time) %>%
   anova_test(dv = log_cort, wid = subjNum, within = condition) %>%
   get_anova_table() %>%
   adjust_pvalue(method = "bonferroni")
-one.way_complete # post15 is sig - same as above
+one.way.condition # post15 is sig - same as above
 
 # equal cases so pairing it will work
-pwc_complete <- good_cp_data %>%
+pwc.condition <- good_cp_data %>%
   group_by(time) %>%
   pairwise_t_test(
     log_cort ~ condition, paired =  TRUE,
     p.adjust.method = "bonferroni"
   )
-pwc_complete # cp and fire are sig diff at post15 and post30, and cp and ctrl at post15 are sig diff - changed from above
+pwc.condition # cp and fire are sig diff at post15 and post30, and cp and ctrl at post15 are sig diff - changed from above
 
-one.way2_complete <- good_cp_data %>%
+# simple main effect of time
+one.way2.time <- good_cp_data %>%
   group_by(condition) %>%
   anova_test(dv = log_cort, wid = subjNum, within = time) %>%
   get_anova_table() %>%
   adjust_pvalue(method = "bonferroni")
-one.way2_complete # cp is sig - same as above
+one.way2.time # cp is sig - same as above
 
 # equal cases so pairing it will work
-pwc2_complete <- good_cp_data %>%
+pwc2.time <- good_cp_data %>%
   group_by(condition) %>%
   pairwise_t_test(
     log_cort ~ time, paired = TRUE,
     p.adjust.method = "bonferroni"
   )
-pwc2_complete # cp, (post1 vs post15), (post15 vs post 30), (post15 vs pre) are sig - changed from above
+pwc2.time # cp, (post1 vs post15), (post15 vs post 30), (post15 vs pre) are sig - changed from above
 
 # Plot with all participant separated by condition and time
 cort_graph_complete <- ggplot(data = good_cp_data, aes(x=factor(time, level = level_order), y=log_cort)) +
@@ -243,7 +221,7 @@ cort_graph_complete <- ggplot(data = good_cp_data, aes(x=factor(time, level = le
         strip.text = element_text(size = 13),
         panel.border = element_rect(color = "black", fill = NA, linewidth = 1))
 
-#jpeg("E:/Nav Stress Data/dissertation/pics/log_cortisol_complete.jpeg", width = 9, height = 5.75, units = 'in', res = 500)
+#jpeg("D:/Nav Stress Data/dissertation/pics/log_cortisol_18goodCP.jpeg", width = 9, height = 5.75, units = 'in', res = 500)
 cort_graph_complete
 #dev.off()
 
@@ -282,15 +260,16 @@ cort_graph_complete <- ggplot(data = bad_cp_data, aes(x=factor(time, level = lev
 cort_graph_complete
 #dev.off()
 
+########## Now split by gender
+
 # Plot with all participant separated by condition, time, and gender
-cort_graph_gender <- ggplot(data = whole_cort, aes(x=factor(time, level = level_order), y=log_cort, fill = gender)) +
+cort_graph_gender <- ggplot(data = good_cp_data, aes(x=factor(time, level = level_order), y=log_cort, fill = gender)) +
   geom_boxplot(outliers = FALSE) +
-  geom_point(color = "gray60") +
+  geom_point(position = position_jitterdodge()) +
   stat_summary(fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
-  geom_line(aes(group = subjNum), color = "gray80", alpha = 0.7) +
   facet_wrap(vars(condition), labeller = labeller(condition = cond.labs)) +
   labs(x = "Time", y = " Log Cortisol (nmol/L)" ) +
-  theme_classic() +
+  theme_classic() + guides(fill = "none") +
   scale_x_discrete(labels = c("Pre", "Post1", "Post15", "Post30")) +
   theme(axis.text.x = element_text(size = 13), 
         axis.text.y = element_text(size = 17), 
@@ -302,11 +281,9 @@ cort_graph_gender <- ggplot(data = whole_cort, aes(x=factor(time, level = level_
         panel.border = element_rect(color = "black", fill = NA, linewidth = 1)) +
   scale_fill_manual(name = "Gender", labels = c("Women", "Men"), values = c("sienna1", "steelblue2"))
 
-#jpeg("E:/Nav Stress Data/dissertation/pics/log_cortisol_allData_gender.jpeg", width = 10, height = 5.75, units = 'in', res = 500)
+#jpeg("D:/Nav Stress Data/dissertation/pics/log_cortisol_18goodCP_gender.jpeg", width = 9, height = 5.75, units = 'in', res = 500)
 cort_graph_gender
 #dev.off()
-
-########## Now split by gender
 
 summary_table <- good_cp_data %>%
   group_by(condition, time, gender) %>%
@@ -343,9 +320,23 @@ cort_graph2 <- ggplot(data = summary_table, aes(x=factor(time, level = level_ord
 cort_graph2
 #dev.off()
 
+# Add a dummy code with male = 0 and female = 1
+good_cp_data <- good_cp_data %>%
+  mutate(dummy_gender = case_when(
+    gender == "m" ~ 0,
+    gender == "f" ~ 1
+  ))
+
+model <- lm(log_cort ~ gender*condition, data = good_cp_data)
+summary(model)
+
 # Repeated 3-way ANOVA
 res.aov <- anova_test(data = good_cp_data, dv = log_cort, wid = subjNum, within = c(condition,time), between = gender)
 get_anova_table(res.aov) # condition and condition:time sig
+
+
+good_cp_data %>%
+  anova_test(log_cort ~ gender*time*condition)
 
 # testing effect of condition at every time point
 one.way_complete <- good_cp_data %>%

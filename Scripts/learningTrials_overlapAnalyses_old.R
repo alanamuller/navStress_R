@@ -18,12 +18,10 @@ library(dplyr)
 rm(list = ls())
 
 ##### Read in data
-setwd("D:/Nav Stress Data/") # set working directory
+setwd("E:/Nav Stress Data/") # set working directory
+# setwd("C:/Users/amuller/Desktop/Alana/UA/HSCL/Stress shortcuts") # for developing
 
-inputData <- read.csv("combined_recreatePathsLogData.csv") # read in file
-
-# make a copy to work with
-myData <- inputData
+myData <- read.csv("combined_recreatePathsLogData.csv") # read in file
 
 # add column with percentages of how much of the path participants recreated (not including grids shared between inner and outer paths)
 # City 1 <- outer: 124; inner: 110, novel: 441
@@ -36,15 +34,12 @@ for (i in 1:nrow(myData)){
   if (myData$city[i] == "city1"){
     myData$percent_grid_overlap_outer[i] <- myData$grid_overlap_outer[i]/124
     myData$percent_grid_overlap_inner[i] <- myData$grid_overlap_inner[i]/110
-    myData$percent_grid_overlap_novel[i] <- myData$novel_grids[i]/441
   } else if (myData$city[i] == "city2"){
     myData$percent_grid_overlap_outer[i] <- myData$grid_overlap_outer[i]/127
     myData$percent_grid_overlap_inner[i] <- myData$grid_overlap_inner[i]/107
-    myData$percent_grid_overlap_novel[i] <- myData$novel_grids[i]/441
   } else if (myData$city[i] == "city3"){
     myData$percent_grid_overlap_outer[i] <- myData$grid_overlap_outer[i]/136
     myData$percent_grid_overlap_inner[i] <- myData$grid_overlap_inner[i]/111
-    myData$percent_grid_overlap_novel[i] <- myData$novel_grids[i]/440
   }
 }
 
@@ -79,87 +74,33 @@ for (j in 1:nrow(graphData)){
     graphData$path_recreated_cat[j] <- "moreFamPath"
   } else {graphData$path_recreated_cat[j] <- "lessFamPath"}
 }
-# make a factor
-graphData$path_recreated_cat <- as.factor(graphData$path_recreated_cat)
 
-# another column to total the incorrect path and novel grids so actual total incorrect
-graphData$incorrect_pathANDNovel <- graphData$incorrect_recreation_percent + graphData$percent_grid_overlap_novel
+# make graph with more and less familiar path categories and correct percentage
+ggplot(graphData, aes(x = subjectID, y = correct_recreation_percent, color = path_recreated_cat)) +
+  geom_point(size = 3)
 
-# make a column for adjusted percent corr
-graphData$adj_percent_correct <- (graphData$correct_recreation_percent - graphData$incorrect_recreation_percent - graphData$percent_grid_overlap_novel)
-
-# summaries by subject and path_recreate_cat
-subjTable <- graphData %>%
-  group_by(subjectID) %>%
-  summarize(
-    count = n(), 
-    mean_correct_recreation = mean(correct_recreation_percent),
-    mean_incorrect_pathANDNovel = mean(incorrect_pathANDNovel), 
-    mean_adj_percent_correct = mean(adj_percent_correct)
-  )
-
-# mean and sd correct only per participant
-mean(subjTable$mean_correct_recreation) # 0.733
-sd(subjTable$mean_correct_recreation) # 0.199
-
-# mean and sd incorrect only per participant
-mean(subjTable$mean_incorrect_pathANDNovel) # 0.210
-sd(subjTable$mean_incorrect_pathANDNovel) # 0.158
-
-# mean and sd adj percent correct per participant
-mean(subjTable$mean_adj_percent_correct) # 0.523
-sd(subjTable$mean_adj_percent_correct) # 0.332
-
-sumTable <- graphData %>%
+# find the average for each person
+plot_graph <- graphData %>%
   group_by(subjectID, path_recreated_cat) %>%
-  summarize(
-    count = n(), 
-    mean_correct_recreation = mean(correct_recreation_percent),
-    mean_incorrect_pathANDNovel = mean(incorrect_pathANDNovel), 
-    mean_adj_percent_correct = mean(adj_percent_correct)
+  summarise(
+    avg_corr_recreate_percent = mean(correct_recreation_percent, na.rm = TRUE),
+    sd_corr_recreate_percent = sd(correct_recreation_percent, na.rm = TRUE),
+    avg_incorr_recreate_percent = mean(incorrect_recreation_percent, na.rm = TRUE),
+    sd_incorr_recreate_percent = sd(incorrect_recreation_percent, na.rm = TRUE)
   )
 
-# mean and sd adj percent correct per participant
-means <- sumTable %>%
-  group_by(path_recreated_cat) %>%
-  summarize(
-    mean_adj_correct = mean(mean_adj_percent_correct), 
-    sd_adj_correct = sd(mean_adj_percent_correct)
-  )
+# gather corr and incorr categories together
+# name the columns you want to gather, the other columns will remain there
+gathered_columns <- c("avg_corr_recreate_percent", "avg_incorr_recreate_percent")
 
-mean(graphData$adj_percent_correct) 
-sd(graphData$adj_percent_correct)
-
-hist(graphData$adj_percent_correct) # data are skewed to the left
-
-# Check how many people had negative numbers for adj percent correct
-negatives <- sum(graphData$adj_percent_correct < 0)
-
-# Check normality
-hist(graphData$adj_percent_correct)
-hist(graphData$correct_recreation_percent)
-hist(graphData$incorrect_recreation_percent)
-hist(graphData$percent_grid_overlap_novel)
-
-# one data point each per participant per familiarity level
-adj_correct_plot <- graphData %>%
-  group_by(subjectID, path_recreated_cat) %>%
-  summarize(
-    mean_adj_percent_correct = mean(adj_percent_correct, na.rm = TRUE)
-  )
-
-# filter out participants 22 adn 26 for not having complete cases
-filtered_adj_percent_correct <- adj_correct_plot %>%
-  filter(!subjectID %in% c(22,26))
-
-hist(filtered_adj_percent_correct$mean_adj_percent_correct)
+# gather the data for grid numbers
+plot_graph <- gather(plot_graph, key = percent_cat, value = percentage, gathered_columns, factor_key = TRUE)
 
 # MANUSCRIPT PIC
-overlap_fam_plot <- ggplot(filtered_adj_percent_correct, aes(x = path_recreated_cat, y = mean_adj_percent_correct)) + 
-  geom_violin() + geom_point() + geom_line(aes(group = subjectID), color = "gray") +
-  stat_summary(aes(group = path_recreated_cat), fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
+overlap_fam_plot <- ggplot(plot_graph, aes(x = path_recreated_cat, y = percentage, fill = percent_cat)) + 
+  geom_boxplot(outliers = FALSE) + geom_jitter(position = position_jitterdodge()) +
   theme_classic() +
-  labs(x = "Familiarity", y = "Adjusted Percent Correct", fill = "Recreation Category") +
+  labs(x = "Familiarity Level", y = "Average Grid Overlap Percent", fill = "Recreation Category") +
   scale_x_discrete(labels = c("Less Familiar", "More Familiar")) + 
   scale_fill_discrete(name = "Recreated Category", labels = c("Overlap with recreated path", "Overlap with nonrecreated path"), type = c("cyan3", "salmon")) +
   theme(axis.text.x = element_text(size = 13), 
@@ -168,56 +109,8 @@ overlap_fam_plot <- ggplot(filtered_adj_percent_correct, aes(x = path_recreated_
         axis.title.y = element_text(size = 15),
         legend.text = element_text(size = 12),
         legend.title = element_text(size = 13))
-#jpeg("D:/Nav Stress Data/dissertation/pics/learning_fam_adjPercent.jpeg", width = 6, height = 5, units = 'in', res = 500)
+#jpeg("C:/Users/amuller/Desktop/Alana/UA/HSCL/Dissertation/pics/learning_fam_gridOverlap.jpeg", width = 8, height = 5.75, units = 'in', res = 500)
 overlap_fam_plot
-#dev.off()
-
-# check if the differences between the pairs is normally distributed
-diffs_df <- pivot_wider(filtered_adj_percent_correct, names_from = path_recreated_cat, values_from = mean_adj_percent_correct)
-diffs_df$diffs <- diffs_df$moreFamPath - diffs_df$lessFamPath
-hist(diffs_df$diffs)
-
-shapiro.test(diffs_df$diffs) # not sig, the diffs are normally distributed
-
-t.test(mean_adj_percent_correct ~ path_recreated_cat, paired = TRUE, data = filtered_adj_percent_correct) # sig
-
-# make the graph for each participant
-subjGraph <- graphData %>%
-  select(subjectID, correct_recreation_percent, incorrect_pathANDNovel, adj_percent_correct)
-# make long
-subjGraph_long <- pivot_longer(!subjectID, names_to = "type", values_to = "percent", data = subjGraph)
-
-# MANUSCRIPT PIC
-indiv_diffs_plot2 <- ggplot(graphData, aes(x = subjectID)) +
-  geom_boxplot(aes(y = correct_recreation_percent, fill = "steelblue")) +
-  geom_boxplot(aes(y = incorrect_pathANDNovel, fill = "lightpink")) +
-  labs(x = "Participant Number", y = "Average Grid Overlap Percent") +
-  scale_fill_discrete(name = "Recreated Category", labels = c("Overlap with nonrecreated path", "Overlap with recreated path")) +
-  theme(axis.text.x = element_text(size = 13), 
-        axis.text.y = element_text(size = 13), 
-        axis.title.x = element_text(size = 15),
-        axis.title.y = element_text(size = 15),
-        legend.text = element_text(size = 12),
-        legend.title = element_text(size = 13), 
-        legend.position = "top")
-jpeg("D:/Nav Stress Data/dissertation/pics/learning_indivDiffs.jpeg", width = 8.5, height = 6, units = 'in', res = 500)
-indiv_diffs_plot2
-dev.off()
-
-# MANUSCRIPT PIC
-subj_percent_plot <- ggplot(subjTable_long, aes(x = subjectID, y = percent, color = type)) + 
-  geom_violin() + geom_jitter() + geom_line(aes(group = subjectID), color = "gray") +
-  theme_classic() +
-  labs(x = "Familiarity Level", y = "Average Grid Overlap Percent", fill = "Recreation Category") +
-  scale_fill_discrete(name = "Recreated Category", labels = c("Overlap with recreated path", "Overlap with nonrecreated path"), type = c("cyan3", "salmon")) +
-  theme(axis.text.x = element_text(size = 13), 
-        axis.text.y = element_text(size = 13), 
-        axis.title.x = element_text(size = 15),
-        axis.title.y = element_text(size = 15),
-        legend.text = element_text(size = 12),
-        legend.title = element_text(size = 13))
-#jpeg("D:/Nav Stress Data/dissertation/pics/learning_fam_adjPercent.jpeg", width = 6, height = 5, units = 'in', res = 500)
-subj_percent_plot
 #dev.off()
 
 ##### stats for the plot
@@ -336,7 +229,7 @@ good_bad_navs <- combo_data %>%
     mean_correct_overlap = mean(correct_recreation_percent), 
     mean_incorrect_overlap = mean(incorrect_recreation_percent)
   )
-  
+
 # Add a label for each person as bad (0-50), med (50-75), and good (75-100)
 good_bad_navs <- good_bad_navs %>%
   mutate(label = case_when(
@@ -606,7 +499,7 @@ q <- ggplot(grid_type_table, aes(x = grid_type, y = median_gridNum, fill = moreF
   facet_wrap(vars(path_recreated), labeller = labeller(path_recreated = wrap_labels)) +
   labs(x = "Grid Type Overlap", y = "Median Grid Number", fill = "More Familiar Path") +
   scale_x_discrete(labels = tick_labels) + scale_fill_discrete(name = "More Familiar Path", labels = c("Inner", "Outer"))
-  
+
 #jpeg("C:/Users/amuller/Desktop/Alana/UA/HSCL/Conferences/iNAV 2024/pics/gridTypeOverlapLearning.jpeg", width = 8, height = 5.75, units = 'in', res = 500)
 q
 #dev.off()
