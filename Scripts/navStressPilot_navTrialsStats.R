@@ -358,6 +358,11 @@ res.aov <- anova_test(data = collapse_subj, dv = mean_overlap_percent, wid = sub
                       within = inner_outer_non, between = first_route_learned, detailed = TRUE)
 get_anova_table(res.aov) # inner_outer_non and interaction are sig
 
+# Bayes Factor
+bayes_rm <- anovaBF(mean_overlap_percent ~ inner_outer_non*first_route_learned + subjectID, data = collapse_subj, whichRandom = "subjectID")
+bayes_rm
+plot(bayes_rm)
+
 # simple main effect of route learned first
 one.way <- collapse_subj %>%
   group_by(inner_outer_non) %>%

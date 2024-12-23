@@ -16,11 +16,12 @@ library(openxlsx)
 library(dplyr)
 library(lme4)
 library(pbkrtest)
+library(BayesFactor)
 
 rm(list = ls())
 
 ##### Read in data
-setwd("D:/Nav Stress Data/") # set working directory
+setwd("E:/Nav Stress Data/") # set working directory
 # setwd("C:/Users/amuller/Desktop/Alana/UA/HSCL/Stress shortcuts") # for developing
 
 ################################# look at nav trials data
@@ -182,6 +183,11 @@ match.aov <- anova_test(data = match_summary, dv = mean_grid_prop, wid = subject
 anova_table <- get_anova_table(match.aov) # grid_type, grid_type_moreFamiliarPath sig
 #write.csv(anova_table, "D:/Nav Stress Data/dissertation/diss_fam_anova_table.csv", row.names = FALSE)
 
+# Bayes Factor
+bayes_rm <- anovaBF(mean_grid_prop ~ condition*grid_type*moreFamiliarPath + subjectID, data = match_summary, whichRandom = "subjectID")
+bayes_rm
+plot(bayes_rm)
+
 # collapse condition since it wasn't significant
 matchNoCond_summary <- longNav %>%
   group_by(subjectID, grid_type, moreFamiliarPath) %>%
@@ -306,6 +312,11 @@ nav_summary <- as.data.frame(nav_summary)
 res.aov <- anova_test(data = nav_summary, dv = mean_grid_prop, wid = subjectID, 
                       within = c(condition, grid_type))
 get_anova_table(res.aov) # grid type is sig
+
+# Bayes Factor
+bayes_rm <- anovaBF(mean_grid_prop ~ condition*grid_type + subjectID, data = nav_summary, whichRandom = "subjectID")
+bayes_rm
+plot(bayes_rm)
 
 # comparisons for grid_type variable
 nav_summary %>%
@@ -480,6 +491,11 @@ withinTest <- anova_test(data = trial_type_summary, dv = mean_grid_prop, wid = s
 grid_type_table <- get_anova_table(withinTest) # grid type, trial type:grid type
 
 #write.csv(grid_type_table, "D:/Nav Stress Data/dissertation/diss_gridTypeTable.csv", row.names = FALSE)
+
+# Bayes Factor
+bayes_rm <- anovaBF(mean_grid_prop ~ trial_type*condition*grid_type + subjectID, data = trial_type_summary, whichRandom = "subjectID")
+bayes_rm
+plot(bayes_rm)
 
 # collapse across condition since there was no effect
 collapse_cond <- trial_type_summary %>%
