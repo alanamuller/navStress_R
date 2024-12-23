@@ -10,7 +10,7 @@ library(ggpubr)
 rm(list = ls())
 
 # Set the directory where the Excel files are stored
-setwd("D:/Nav Stress Data")
+setwd("E:/Nav Stress Data")
 
 # add column with percentages of how much of the path participants recreated (not including grids shared between inner and outer paths)
 # City 1 <- outer: 124; inner: 110, novel: 441
