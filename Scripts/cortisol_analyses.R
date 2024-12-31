@@ -349,7 +349,12 @@ get_anova_table(res.aov) # condition and condition:time sig
 # Bayes Factor
 bayes_rm <- anovaBF(log_cort ~ condition*time*gender + subjNum, data = good_cp_data, whichRandom = "subjNum")
 bayes_rm
-plot(bayes_rm)
+# interactions
+bayes_rm[4] / bayes_rm[3] # time*condition
+bayes_rm[10] / bayes_rm[6] # gender*condition
+bayes_rm[13] / bayes_rm[7] # gender*time
+bayes_rm[18] / bayes_rm[17] # gender*condition*time
+
 
 good_cp_data %>%
   anova_test(log_cort ~ gender*time*condition)
