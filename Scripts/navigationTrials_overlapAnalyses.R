@@ -167,6 +167,47 @@ navTrialsMean <- ggplot(nav_summary, aes(x = grid_type, y = mean_grid_prop, fill
 navTrialsMean
 #dev.off()
 
+# rep measures mixed ANOVA
+
+# normality check
+normality_each_cond <- nav_summary %>%
+  group_by(condition, grid_type) %>%
+  shapiro_test(mean_grid_prop)
+normality_each_cond # 2 non sig but overall, really not bad
+
+nav_summary %>%
+  group_by(grid_type) %>%
+  levene_test(mean_grid_prop ~ condition) # good homogeneity of variance
+
+nav_summary <- as.data.frame(nav_summary)
+
+res.aov <- anova_test(data = nav_summary, dv = mean_grid_prop, wid = subjectID, 
+                      within = c(condition, grid_type))
+get_anova_table(res.aov) # grid type is sig
+
+# Bayes Factor
+bayes_rm <- anovaBF(mean_grid_prop ~ condition*grid_type + subjectID, data = nav_summary, whichRandom = "subjectID")
+bayes_rm
+# calculate interaction term
+bayes_rm[4] / bayes_rm[3]
+
+# comparisons for grid_type variable
+nav_summary %>%
+  pairwise_t_test(
+    mean_grid_prop ~ grid_type, paired = TRUE, 
+    p.adjust.method = "bonferroni"
+  )
+
+# Try a linear mixed effects model
+basic.lm <- lmer(mean_grid_prop ~ grid_type*condition + (1|subjectID), data = nav_summary)
+summary(basic.lm)
+
+# Add moreFamiliarPath to the model
+addFam.lm <- lmer(mean_grid_prop ~ grid_type*condition*moreFamiliarPath + (1|subjectID), data = nav_summary)
+summary(addFam.lm)
+
+anova(basic.lm, addFam.lm) # addFam.lm is the better model according to AIC but not BIC
+
 # trying an anova with match/mismatch
 # one data point per person per grid type
 match_summary <- longNav %>%
@@ -186,7 +227,11 @@ anova_table <- get_anova_table(match.aov) # grid_type, grid_type_moreFamiliarPat
 # Bayes Factor
 bayes_rm <- anovaBF(mean_grid_prop ~ condition*grid_type*moreFamiliarPath + subjectID, data = match_summary, whichRandom = "subjectID")
 bayes_rm
-plot(bayes_rm)
+# interactions
+bayes_rm[13] / bayes_rm[7] # condition:moreFamiliarPath
+bayes_rm[10] / bayes_rm[6] # condition:gridType
+bayes_rm[4] / bayes_rm[3] # moreFamiliarPath:gridType
+bayes_rm[18] / bayes_rm[17] # condition:moreFamiliarPath:gridType
 
 # collapse condition since it wasn't significant
 matchNoCond_summary <- longNav %>%
@@ -293,50 +338,6 @@ subj_table$condition <- as.factor(subj_table$condition)
 res.aov <- anova_test(data = subj_table, dv = mean, wid = subjectID, 
                       within = condition)
 get_anova_table(res.aov) # no diff - total grid count is the same for all conditions
-
-
-# rep measures mixed ANOVA
-
-# normality check
-normality_each_cond <- nav_summary %>%
-  group_by(condition, grid_type) %>%
-  shapiro_test(mean_grid_prop)
-normality_each_cond # 2 non sig but overall, really not bad
-
-nav_summary %>%
-  group_by(grid_type) %>%
-  levene_test(mean_grid_prop ~ condition) # good homogeneity of variance
-
-nav_summary <- as.data.frame(nav_summary)
-                                
-res.aov <- anova_test(data = nav_summary, dv = mean_grid_prop, wid = subjectID, 
-                      within = c(condition, grid_type))
-get_anova_table(res.aov) # grid type is sig
-
-# Bayes Factor
-bayes_rm <- anovaBF(mean_grid_prop ~ condition*grid_type + subjectID, data = nav_summary, whichRandom = "subjectID")
-bayes_rm
-plot(bayes_rm)
-
-# comparisons for grid_type variable
-nav_summary %>%
-  pairwise_t_test(
-    mean_grid_prop ~ grid_type, paired = TRUE, 
-    p.adjust.method = "bonferroni"
-  )
-
-# Try a linear mixed effects model
-basic.lm <- lmer(mean_grid_prop ~ grid_type*condition + (1|subjectID), data = nav_summary)
-summary(basic.lm)
-
-# Add moreFamiliarPath to the model
-addFam.lm <- lmer(mean_grid_prop ~ grid_type*condition*moreFamiliarPath + (1|subjectID), data = nav_summary)
-summary(addFam.lm)
-
-anova(basic.lm, addFam.lm) # addFam.lm is the better model according to AIC but not BIC
-
-
-
 
 # graph for variance for iNAV
 wrap_labels <- c("Inner More Familiar", "Outer More Familiar")

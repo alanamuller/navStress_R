@@ -175,7 +175,8 @@ good_cp_data$gender <- as.factor(good_cp_data$gender)
 good_cp_data$time <- as.factor(good_cp_data$time)
 bayes_rm <- anovaBF(log_cort ~ condition*time + subjNum, data = good_cp_data, whichRandom = "subjNum")
 bayes_rm
-plot(bayes_rm)
+# interaction calculation
+bayes_rm[4] / bayes_rm[3]
 
 # testing simple main effects
 
