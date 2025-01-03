@@ -1056,13 +1056,81 @@ cor.test(auc_fire$auc_log, auc_fire$log_excessPath) # not sig for fire
 
 # make a dataframe combining all the surveys
 
+################### simple t-tests for dissertation
 
 
 
+# Create the fam_level column
+new_nav_summary <- nav_summary %>%
+  mutate(fam_level = case_when(
+    grid_type == "novel_proportion" ~ "novel",
+    (grid_type == "outer_proportion" & moreFamiliarPath == "outer") | 
+      (grid_type == "inner_proportion" & moreFamiliarPath == "inner") ~ "more",
+    (grid_type == "outer_proportion" & moreFamiliarPath == "inner") | 
+      (grid_type == "inner_proportion" & moreFamiliarPath == "outer") ~ "less",
+    TRUE ~ NA_character_  # Handle unexpected cases
+  ))
+new_nav_summary$fam_level <- as.factor(new_nav_summary$fam_level)
 
+##### t-tests
 
+# exclude 16 and 22 because they didn't complete all conditions
+new_nav_summary <- new_nav_summary %>%
+  filter(!subjectID %in% c(16,22))
 
+### more familiar grid
+# cp vs ctrl
+moreFam_cp_nav <- new_nav_summary %>%
+  filter(fam_level == "more" & condition %in% c("cp", "ctrl"))
 
+t.test(mean_grid_prop ~ condition, paired = TRUE, data = moreFam_cp_nav)
+# Bayes Factor
+bayes_rm <- anovaBF(mean_grid_prop ~ condition + subjectID, data = moreFam_cp_nav, whichRandom = "subjectID")
+bayes_rm
 
+# fire vs ctrl
+moreFam_fire_nav <- new_nav_summary %>%
+  filter(fam_level == "more" & condition %in% c("fire", "ctrl"))
 
+t.test(mean_grid_prop ~ condition, paired = TRUE, data = moreFam_fire_nav)
+# Bayes Factor
+bayes_rm <- anovaBF(mean_grid_prop ~ condition + subjectID, data = moreFam_fire_nav, whichRandom = "subjectID")
+bayes_rm
 
+### less familiar grid
+# cp vs ctrl
+lessFam_cp_nav <- new_nav_summary %>%
+  filter(fam_level == "less" & condition %in% c("cp", "ctrl"))
+
+t.test(mean_grid_prop ~ condition, paired = TRUE, data = lessFam_cp_nav)
+# Bayes Factor
+bayes_rm <- anovaBF(mean_grid_prop ~ condition + subjectID, data = lessFam_cp_nav, whichRandom = "subjectID")
+bayes_rm
+
+# fire vs ctrl
+lessFam_fire_nav <- new_nav_summary %>%
+  filter(fam_level == "less" & condition %in% c("fire", "ctrl"))
+
+t.test(mean_grid_prop ~ condition, paired = TRUE, data = lessFam_fire_nav)
+# Bayes Factor
+bayes_rm <- anovaBF(mean_grid_prop ~ condition + subjectID, data = lessFam_fire_nav, whichRandom = "subjectID")
+bayes_rm
+
+### novel grid
+# cp vs ctrl
+novelFam_cp_nav <- new_nav_summary %>%
+  filter(fam_level == "novel" & condition %in% c("cp", "ctrl"))
+
+t.test(mean_grid_prop ~ condition, paired = TRUE, data = novelFam_cp_nav)
+# Bayes Factor
+bayes_rm <- anovaBF(mean_grid_prop ~ condition + subjectID, data = novelFam_cp_nav, whichRandom = "subjectID")
+bayes_rm
+
+# fire vs ctrl
+novelFam_fire_nav <- new_nav_summary %>%
+  filter(fam_level == "novel" & condition %in% c("fire", "ctrl"))
+
+t.test(mean_grid_prop ~ condition, paired = TRUE, data = novelFam_fire_nav)
+# Bayes Factor
+bayes_rm <- anovaBF(mean_grid_prop ~ condition + subjectID, data = novelFam_fire_nav, whichRandom = "subjectID")
+bayes_rm
