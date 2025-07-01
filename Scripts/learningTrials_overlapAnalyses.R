@@ -173,7 +173,7 @@ overlap_fam_plot <- ggplot(filtered_adj_percent_correct, aes(x = path_recreated_
         axis.title.y = element_text(size = 15),
         legend.text = element_text(size = 12),
         legend.title = element_text(size = 13))
-#jpeg("D:/Nav Stress Data/dissertation/pics/learning_fam_adjPercent.jpeg", width = 6, height = 5, units = 'in', res = 500)
+#jpeg("D:/UA_stuff/seagate_hard_drive/Nav Stress Data/manuscript_pics/learning_fam_adjPercent.jpeg", width = 6, height = 5, units = 'in', res = 500)
 overlap_fam_plot
 #dev.off()
 
