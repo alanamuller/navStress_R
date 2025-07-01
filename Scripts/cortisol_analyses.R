@@ -7,12 +7,13 @@ library(dplyr)
 library(tidyr)
 library(pracma)
 library(plotrix)
+library(BayesFactor)
 
 # Start fresh by removing everything from the environment
 rm(list = ls())
 
 # Set working directory
-setwd("D:/Nav Stress Data/Salimetrics reports") # from hard drive
+setwd("E:/Nav Stress Data/Salimetrics reports") # from hard drive
 
 # Enter the data - for now only analyze the complete cases
 #samples9Data <- readxl::read_excel("saliva_data_bySubject.xlsx", sheet = "9samples")
@@ -165,6 +166,17 @@ good_cp_data <- all_data %>%
 # 3x4 within-subjects anova
 res.aov <- anova_test(data = good_cp_data, dv = log_cort, wid = subjNum, within = c(condition,time))
 get_anova_table(res.aov) # condition and condition*time interaction sig
+
+# Bayes Factor
+good_cp_data <- as.data.frame(good_cp_data)
+good_cp_data$subjNum <- as.factor(good_cp_data$subjNum)
+good_cp_data$condition <- as.factor(good_cp_data$condition)
+good_cp_data$gender <- as.factor(good_cp_data$gender)
+good_cp_data$time <- as.factor(good_cp_data$time)
+bayes_rm <- anovaBF(log_cort ~ condition*time + subjNum, data = good_cp_data, whichRandom = "subjNum")
+bayes_rm
+# interaction calculation
+bayes_rm[4] / bayes_rm[3]
 
 # testing simple main effects
 
@@ -333,6 +345,15 @@ summary(model)
 # Repeated 3-way ANOVA
 res.aov <- anova_test(data = good_cp_data, dv = log_cort, wid = subjNum, within = c(condition,time), between = gender)
 get_anova_table(res.aov) # condition and condition:time sig
+
+# Bayes Factor
+bayes_rm <- anovaBF(log_cort ~ condition*time*gender + subjNum, data = good_cp_data, whichRandom = "subjNum")
+bayes_rm
+# interactions
+bayes_rm[4] / bayes_rm[3] # time*condition
+bayes_rm[10] / bayes_rm[6] # gender*condition
+bayes_rm[13] / bayes_rm[7] # gender*time
+bayes_rm[18] / bayes_rm[17] # gender*condition*time
 
 
 good_cp_data %>%

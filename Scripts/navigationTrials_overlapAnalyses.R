@@ -16,11 +16,12 @@ library(openxlsx)
 library(dplyr)
 library(lme4)
 library(pbkrtest)
+library(BayesFactor)
 
 rm(list = ls())
 
 ##### Read in data
-setwd("D:/Nav Stress Data/") # set working directory
+setwd("E:/Nav Stress Data/") # set working directory
 # setwd("C:/Users/amuller/Desktop/Alana/UA/HSCL/Stress shortcuts") # for developing
 
 ################################# look at nav trials data
@@ -166,6 +167,47 @@ navTrialsMean <- ggplot(nav_summary, aes(x = grid_type, y = mean_grid_prop, fill
 navTrialsMean
 #dev.off()
 
+# rep measures mixed ANOVA
+
+# normality check
+normality_each_cond <- nav_summary %>%
+  group_by(condition, grid_type) %>%
+  shapiro_test(mean_grid_prop)
+normality_each_cond # 2 non sig but overall, really not bad
+
+nav_summary %>%
+  group_by(grid_type) %>%
+  levene_test(mean_grid_prop ~ condition) # good homogeneity of variance
+
+nav_summary <- as.data.frame(nav_summary)
+
+res.aov <- anova_test(data = nav_summary, dv = mean_grid_prop, wid = subjectID, 
+                      within = c(condition, grid_type))
+get_anova_table(res.aov) # grid type is sig
+
+# Bayes Factor
+bayes_rm <- anovaBF(mean_grid_prop ~ condition*grid_type + subjectID, data = nav_summary, whichRandom = "subjectID")
+bayes_rm
+# calculate interaction term
+bayes_rm[4] / bayes_rm[3]
+
+# comparisons for grid_type variable
+nav_summary %>%
+  pairwise_t_test(
+    mean_grid_prop ~ grid_type, paired = TRUE, 
+    p.adjust.method = "bonferroni"
+  )
+
+# Try a linear mixed effects model
+basic.lm <- lmer(mean_grid_prop ~ grid_type*condition + (1|subjectID), data = nav_summary)
+summary(basic.lm)
+
+# Add moreFamiliarPath to the model
+addFam.lm <- lmer(mean_grid_prop ~ grid_type*condition*moreFamiliarPath + (1|subjectID), data = nav_summary)
+summary(addFam.lm)
+
+anova(basic.lm, addFam.lm) # addFam.lm is the better model according to AIC but not BIC
+
 # trying an anova with match/mismatch
 # one data point per person per grid type
 match_summary <- longNav %>%
@@ -181,6 +223,15 @@ match.aov <- anova_test(data = match_summary, dv = mean_grid_prop, wid = subject
                         within = grid_type, between = c(condition, moreFamiliarPath))
 anova_table <- get_anova_table(match.aov) # grid_type, grid_type_moreFamiliarPath sig
 #write.csv(anova_table, "D:/Nav Stress Data/dissertation/diss_fam_anova_table.csv", row.names = FALSE)
+
+# Bayes Factor
+bayes_rm <- anovaBF(mean_grid_prop ~ condition*grid_type*moreFamiliarPath + subjectID, data = match_summary, whichRandom = "subjectID")
+bayes_rm
+# interactions
+bayes_rm[13] / bayes_rm[7] # condition:moreFamiliarPath
+bayes_rm[10] / bayes_rm[6] # condition:gridType
+bayes_rm[4] / bayes_rm[3] # moreFamiliarPath:gridType
+bayes_rm[18] / bayes_rm[17] # condition:moreFamiliarPath:gridType
 
 # collapse condition since it wasn't significant
 matchNoCond_summary <- longNav %>%
@@ -287,45 +338,6 @@ subj_table$condition <- as.factor(subj_table$condition)
 res.aov <- anova_test(data = subj_table, dv = mean, wid = subjectID, 
                       within = condition)
 get_anova_table(res.aov) # no diff - total grid count is the same for all conditions
-
-
-# rep measures mixed ANOVA
-
-# normality check
-normality_each_cond <- nav_summary %>%
-  group_by(condition, grid_type) %>%
-  shapiro_test(mean_grid_prop)
-normality_each_cond # 2 non sig but overall, really not bad
-
-nav_summary %>%
-  group_by(grid_type) %>%
-  levene_test(mean_grid_prop ~ condition) # good homogeneity of variance
-
-nav_summary <- as.data.frame(nav_summary)
-                                
-res.aov <- anova_test(data = nav_summary, dv = mean_grid_prop, wid = subjectID, 
-                      within = c(condition, grid_type))
-get_anova_table(res.aov) # grid type is sig
-
-# comparisons for grid_type variable
-nav_summary %>%
-  pairwise_t_test(
-    mean_grid_prop ~ grid_type, paired = TRUE, 
-    p.adjust.method = "bonferroni"
-  )
-
-# Try a linear mixed effects model
-basic.lm <- lmer(mean_grid_prop ~ grid_type*condition + (1|subjectID), data = nav_summary)
-summary(basic.lm)
-
-# Add moreFamiliarPath to the model
-addFam.lm <- lmer(mean_grid_prop ~ grid_type*condition*moreFamiliarPath + (1|subjectID), data = nav_summary)
-summary(addFam.lm)
-
-anova(basic.lm, addFam.lm) # addFam.lm is the better model according to AIC but not BIC
-
-
-
 
 # graph for variance for iNAV
 wrap_labels <- c("Inner More Familiar", "Outer More Familiar")
@@ -480,6 +492,11 @@ withinTest <- anova_test(data = trial_type_summary, dv = mean_grid_prop, wid = s
 grid_type_table <- get_anova_table(withinTest) # grid type, trial type:grid type
 
 #write.csv(grid_type_table, "D:/Nav Stress Data/dissertation/diss_gridTypeTable.csv", row.names = FALSE)
+
+# Bayes Factor
+bayes_rm <- anovaBF(mean_grid_prop ~ trial_type*condition*grid_type + subjectID, data = trial_type_summary, whichRandom = "subjectID")
+bayes_rm
+plot(bayes_rm)
 
 # collapse across condition since there was no effect
 collapse_cond <- trial_type_summary %>%
@@ -1039,13 +1056,81 @@ cor.test(auc_fire$auc_log, auc_fire$log_excessPath) # not sig for fire
 
 # make a dataframe combining all the surveys
 
+################### simple t-tests for dissertation
 
 
 
+# Create the fam_level column
+new_nav_summary <- nav_summary %>%
+  mutate(fam_level = case_when(
+    grid_type == "novel_proportion" ~ "novel",
+    (grid_type == "outer_proportion" & moreFamiliarPath == "outer") | 
+      (grid_type == "inner_proportion" & moreFamiliarPath == "inner") ~ "more",
+    (grid_type == "outer_proportion" & moreFamiliarPath == "inner") | 
+      (grid_type == "inner_proportion" & moreFamiliarPath == "outer") ~ "less",
+    TRUE ~ NA_character_  # Handle unexpected cases
+  ))
+new_nav_summary$fam_level <- as.factor(new_nav_summary$fam_level)
 
+##### t-tests
 
+# exclude 16 and 22 because they didn't complete all conditions
+new_nav_summary <- new_nav_summary %>%
+  filter(!subjectID %in% c(16,22))
 
+### more familiar grid
+# cp vs ctrl
+moreFam_cp_nav <- new_nav_summary %>%
+  filter(fam_level == "more" & condition %in% c("cp", "ctrl"))
 
+t.test(mean_grid_prop ~ condition, paired = TRUE, data = moreFam_cp_nav)
+# Bayes Factor
+bayes_rm <- anovaBF(mean_grid_prop ~ condition + subjectID, data = moreFam_cp_nav, whichRandom = "subjectID")
+bayes_rm
 
+# fire vs ctrl
+moreFam_fire_nav <- new_nav_summary %>%
+  filter(fam_level == "more" & condition %in% c("fire", "ctrl"))
 
+t.test(mean_grid_prop ~ condition, paired = TRUE, data = moreFam_fire_nav)
+# Bayes Factor
+bayes_rm <- anovaBF(mean_grid_prop ~ condition + subjectID, data = moreFam_fire_nav, whichRandom = "subjectID")
+bayes_rm
 
+### less familiar grid
+# cp vs ctrl
+lessFam_cp_nav <- new_nav_summary %>%
+  filter(fam_level == "less" & condition %in% c("cp", "ctrl"))
+
+t.test(mean_grid_prop ~ condition, paired = TRUE, data = lessFam_cp_nav)
+# Bayes Factor
+bayes_rm <- anovaBF(mean_grid_prop ~ condition + subjectID, data = lessFam_cp_nav, whichRandom = "subjectID")
+bayes_rm
+
+# fire vs ctrl
+lessFam_fire_nav <- new_nav_summary %>%
+  filter(fam_level == "less" & condition %in% c("fire", "ctrl"))
+
+t.test(mean_grid_prop ~ condition, paired = TRUE, data = lessFam_fire_nav)
+# Bayes Factor
+bayes_rm <- anovaBF(mean_grid_prop ~ condition + subjectID, data = lessFam_fire_nav, whichRandom = "subjectID")
+bayes_rm
+
+### novel grid
+# cp vs ctrl
+novelFam_cp_nav <- new_nav_summary %>%
+  filter(fam_level == "novel" & condition %in% c("cp", "ctrl"))
+
+t.test(mean_grid_prop ~ condition, paired = TRUE, data = novelFam_cp_nav)
+# Bayes Factor
+bayes_rm <- anovaBF(mean_grid_prop ~ condition + subjectID, data = novelFam_cp_nav, whichRandom = "subjectID")
+bayes_rm
+
+# fire vs ctrl
+novelFam_fire_nav <- new_nav_summary %>%
+  filter(fam_level == "novel" & condition %in% c("fire", "ctrl"))
+
+t.test(mean_grid_prop ~ condition, paired = TRUE, data = novelFam_fire_nav)
+# Bayes Factor
+bayes_rm <- anovaBF(mean_grid_prop ~ condition + subjectID, data = novelFam_fire_nav, whichRandom = "subjectID")
+bayes_rm
