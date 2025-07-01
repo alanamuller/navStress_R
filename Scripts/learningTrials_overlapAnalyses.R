@@ -18,9 +18,14 @@ library(dplyr)
 rm(list = ls())
 
 ##### Read in data
-setwd("D:/Nav Stress Data/") # set working directory
+#setwd("D:/Nav Stress Data/") # set working directory
+setwd("D:/UA_stuff/seagate_hard_drive/Nav Stress Data/")
 
 inputData <- read.csv("combined_recreatePathsLogData.csv") # read in file
+
+# get rid of participants 16 and 22 because they don't have complete data
+inputData <- inputData %>%
+  filter(!subjectID %in% c(16,22))
 
 # make a copy to work with
 myData <- inputData
@@ -99,16 +104,16 @@ subjTable <- graphData %>%
   )
 
 # mean and sd correct only per participant
-mean(subjTable$mean_correct_recreation) # 0.733
-sd(subjTable$mean_correct_recreation) # 0.199
+mean(subjTable$mean_correct_recreation) # 0.752
+sd(subjTable$mean_correct_recreation) # 0.189
 
 # mean and sd incorrect only per participant
-mean(subjTable$mean_incorrect_pathANDNovel) # 0.210
-sd(subjTable$mean_incorrect_pathANDNovel) # 0.158
+mean(subjTable$mean_incorrect_pathANDNovel) # 0.203
+sd(subjTable$mean_incorrect_pathANDNovel) # 0.157
 
 # mean and sd adj percent correct per participant
-mean(subjTable$mean_adj_percent_correct) # 0.523
-sd(subjTable$mean_adj_percent_correct) # 0.332
+mean(subjTable$mean_adj_percent_correct) # 0.550
+sd(subjTable$mean_adj_percent_correct) # 0.323
 
 sumTable <- graphData %>%
   group_by(subjectID, path_recreated_cat) %>%
@@ -191,18 +196,18 @@ subjGraph_long <- pivot_longer(!subjectID, names_to = "type", values_to = "perce
 indiv_diffs_plot2 <- ggplot(graphData, aes(x = subjectID)) +
   geom_boxplot(aes(y = correct_recreation_percent, fill = "steelblue")) +
   geom_boxplot(aes(y = incorrect_pathANDNovel, fill = "lightpink")) +
-  labs(x = "Participant Number", y = "Average Grid Overlap Percent") +
+  labs(x = "Individual Participants", y = "Average Grid Overlap Percent") +
   scale_fill_discrete(name = "Recreated Category", labels = c("Overlap with nonrecreated path", "Overlap with recreated path")) +
-  theme(axis.text.x = element_text(size = 13), 
+  theme(axis.text.x = element_blank(), 
         axis.text.y = element_text(size = 13), 
         axis.title.x = element_text(size = 15),
         axis.title.y = element_text(size = 15),
         legend.text = element_text(size = 12),
         legend.title = element_text(size = 13), 
         legend.position = "top")
-jpeg("D:/Nav Stress Data/dissertation/pics/learning_indivDiffs.jpeg", width = 8.5, height = 6, units = 'in', res = 500)
+#jpeg("D:/UA_stuff/seagate_hard_drive/Nav Stress Data/manuscript_pics/learning_indivDiffs.jpeg", width = 8.5, height = 6, units = 'in', res = 500)
 indiv_diffs_plot2
-dev.off()
+#dev.off()
 
 # MANUSCRIPT PIC
 subj_percent_plot <- ggplot(subjTable_long, aes(x = subjectID, y = percent, color = type)) + 
