@@ -1439,9 +1439,3 @@ write.csv(learning_path_log, paste("E:/Nav Stress Data/Participant_data/learning
 # Save recreate_paths_log to csv file
 write.csv(recreate_paths_log, paste("E:/Nav Stress Data/Participant_data/recreatePathsLogData", 
                                    subject_num, "_", subject_city, ".csv", sep = ""), row.names = FALSE)
-
-
-
-
-
-
