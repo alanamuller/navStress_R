@@ -15,14 +15,20 @@ library(ARTool)
 library(openxlsx)
 library(dplyr)
 library(lme4)
+library(lmerTest)
 library(pbkrtest)
 library(BayesFactor)
+library(emmeans)
+library(brms)
+library(bridgesampling)
+library(ggeffects)
 
 rm(list = ls())
 
 ##### Read in data
-setwd("E:/Nav Stress Data/") # set working directory
+# setwd("E:/Nav Stress Data/") # set working directory
 # setwd("C:/Users/amuller/Desktop/Alana/UA/HSCL/Stress shortcuts") # for developing
+setwd("D:/UA_stuff/seagate_hard_drive/Nav Stress Data/")
 
 ################################# look at nav trials data
 
@@ -191,6 +197,36 @@ bayes_rm
 # calculate interaction term
 bayes_rm[4] / bayes_rm[3]
 
+# Add spaghetti plot of cortisol values
+# First make the data long
+cort_long <- cort_data %>%
+  pivot_longer(
+    cols = c(pre, post1, post15, post30),
+    names_to = "time",
+    values_to = "cort_value"
+  )
+# Plot the graph
+ggplot(cort_long, aes(x = time, y = cort_value, color = condition, group = interaction(subjNum, condition))) +
+  geom_line(alpha = 0.4) +
+  geom_point(size = 2) + 
+  theme_classic() + 
+  labs(x = "Time", y = "Cortisol Raw Value") +
+  facet_wrap(~subjNum)
+
+# Add another analysis to see if cort AUC values were associated with excess path for each condition - linear mixed effects model
+# Add auc_data_long to excess_path_data
+auc_excessPath_data <- auc_data_long %>%
+  left_join(excess_path_data, by = c("subjNum", "condition"))
+
+plot(auc_excessPath_data$auc, auc_excessPath_data$mean_excessPath)
+plot(auc_excessPath_data$auc_log, auc_excessPath_data$mean_excessPath)
+plot(auc_excessPath_data$auc_bc, auc_excessPath_data$mean_excessPath)
+
+model <- lmer(
+  mean_excessPath ~ auc * condition + (1 | subjNum),
+  data = auc_excessPath_data)
+summary(model)
+
 # comparisons for grid_type variable
 nav_summary %>%
   pairwise_t_test(
@@ -260,6 +296,61 @@ pwc <- matchNoCond_summary %>%
 pwc # inners are sig, outers don't survive p adjustment
 #write.csv(pwc, "D:/Nav Stress Data/dissertation/diss_fam_pwc_anova_table.csv", row.names = FALSE)
 
+# Bayes Factor for the pairwise analysis
+# Make separate groups for inner and outer more familiar
+inner_moreFam_data <- matchNoCond_summary %>%
+  filter(moreFamiliarPath == "inner") %>%
+  select(subjectID, grid_type, mean_grid_prop) %>%
+  pivot_wider(
+    names_from = grid_type, 
+    values_from = mean_grid_prop)
+
+outer_moreFam_data <- matchNoCond_summary %>%
+  filter(moreFamiliarPath == "outer") %>%
+  select(subjectID, grid_type, mean_grid_prop) %>%
+  pivot_wider(
+    names_from = grid_type, 
+    values_from = mean_grid_prop)
+
+# 6 Bayes Factors coming up
+bf_innerF_novelOuter <- ttestBF(
+  x = inner_moreFam_data$novel_proportion,
+  y = inner_moreFam_data$outer_proportion,
+  paired = TRUE
+)
+bf_innerF_novelInner <- ttestBF(
+  x = inner_moreFam_data$novel_proportion,
+  y = inner_moreFam_data$inner_proportion,
+  paired = TRUE
+)
+bf_innerF_outerInner <- ttestBF(
+  x = inner_moreFam_data$outer_proportion,
+  y = inner_moreFam_data$inner_proportion,
+  paired = TRUE
+)
+bf_outerF_novelOuter <- ttestBF(
+  x = outer_moreFam_data$novel_proportion,
+  y = outer_moreFam_data$outer_proportion,
+  paired = TRUE
+)
+bf_outerF_novelInner <- ttestBF(
+  x = outer_moreFam_data$novel_proportion,
+  y = outer_moreFam_data$inner_proportion,
+  paired = TRUE
+)
+bf_outerF_outerInner <- ttestBF(
+  x = outer_moreFam_data$outer_proportion,
+  y = outer_moreFam_data$inner_proportion,
+  paired = TRUE
+)
+# 6 Bayes Factor results for the table
+bf_innerF_novelOuter
+bf_innerF_novelInner
+bf_innerF_outerInner
+bf_outerF_novelOuter
+bf_outerF_novelInner
+bf_outerF_outerInner
+
 # Effect of familiar at each grid_type
 match2.way <- matchNoCond_summary %>%
   group_by(grid_type) %>%
@@ -267,6 +358,34 @@ match2.way <- matchNoCond_summary %>%
   get_anova_table() %>%
   adjust_pvalue(method = "bonferroni")
 match2.way # outer and inner sig
+
+# Run the Bayes Factor analysis
+# First split into grid types
+novel_prop_data <- matchNoCond_summary %>%
+  filter(grid_type == "novel_proportion")
+inner_prop_data <- matchNoCond_summary %>%
+  filter(grid_type == "inner_proportion")
+outer_prop_data <- matchNoCond_summary %>%
+  filter(grid_type == "outer_proportion")
+
+# Run the Bayes Factor
+bf_novel <- anovaBF(
+  mean_grid_prop ~ moreFamiliarPath + subjectID,
+  data = novel_prop_data,
+  whichRandom = "subjectID")
+bf_novel
+
+bf_inner <- anovaBF(
+  mean_grid_prop ~ moreFamiliarPath + subjectID,
+  data = inner_prop_data,
+  whichRandom = "subjectID")
+bf_inner
+
+bf_outer <- anovaBF(
+  mean_grid_prop ~ moreFamiliarPath + subjectID,
+  data = outer_prop_data,
+  whichRandom = "subjectID")
+bf_outer
 
 # MANUSCRIPT PIC
 tick_labels <- c("Novel Grids", "Outer Grids", "Inner Grids")
@@ -834,6 +953,14 @@ opt.res.aov <- anova_test(data = optimal_by_condition, dv = optimal_nav_count, w
                       within = condition)
 get_anova_table(opt.res.aov) # not sig
 
+# Bayes Factor
+bf_optimal <- anovaBF(
+  optimal_nav_count ~ condition + subjectID,
+  data = optimal_by_condition,
+  whichRandom = "subjectID"
+)
+bf_optimal
+
 # check angular error for outliers - 1 at 116 SOT error
 mean_SOT <- mean(optimal_lost_subj_SOT$SOT_average_angular_error)
 sd_SOT <- sd(optimal_lost_subj_SOT$SOT_average_angular_error)
@@ -985,16 +1112,83 @@ bigData$subjNum <- as.factor(bigData$subjNum)
 bigData$condition <- as.factor(bigData$condition)
 bigData$gender <- as.factor(bigData$gender)
 
-
 # log_auc and log excess path
 plot(bigData$auc_log, bigData$log_excessPath)
 cor.test(bigData$auc_log, bigData$log_excessPath) # not sig
 
-aucLog_excessPath_condition <- ggplot(bigData, aes(x = auc_log, y = log_excessPath, color = condition)) + 
+# Try auc_bc because that one is the area with respect to the increase which is the measure we want
+# Can't log auc_bc because there are negative values
+plot(bigData$auc_bc, bigData$log_excessPath)
+cor.test(bigData$auc_log, bigData$log_excessPath) # not sig
+
+# Linear mixed model
+# Make ctrl the refernce condition first by reordering the levels
+bigData <- bigData %>%
+  mutate(condition = relevel(factor(condition), ref = "ctrl"))
+
+model2 <- lmer(
+  log_excessPath ~ auc_bc * condition + (1| subjNum),
+  data = bigData)
+summary(model2)
+
+# Get slopes for each condition
+slopes <- emtrends(model2, ~condition, var = "auc_bc") # only control is sig
+summary(slopes, infer = TRUE)
+# Stats for each comparison
+pairs(emtrends(model2, ~condition, var = "auc_bc"))
+
+# Maybe a better plot
+pred <- ggpredict(
+  model2,
+  terms = c("auc_bc", "condition")
+)
+
+auci_excessPath_condition_LMM <- ggplot(bigData, aes(x = auc_bc, y = log_excessPath, color = condition)) +
+  geom_point(alpha = 0.4) +
+  geom_line(
+    data = pred,
+    aes(x = x, y = predicted, color = group),
+    linewidth = 1.2
+  ) +
+  geom_ribbon(
+    data = pred,
+    aes(
+      x = x,
+      ymin = conf.low,
+      ymax = conf.high,
+      fill = group
+    ),
+    alpha = 0.1,
+    color = NA,
+    inherit.aes = FALSE
+  ) +
+  theme_classic() +
+  labs(x = "AUCi", y = "Excess Path (Log)",
+       color = "Condition", fill = "Condition") +
+  scale_color_manual(name = "Condition", 
+                     values = c("ctrl" = "green", "cp" = "blue", "fire" = "red"),  # Change colors as needed
+                     labels = c("ctrl" = "Control", "cp" = "Cold Pressor", "fire" = "Fire")) +  # Custom labels
+  scale_fill_manual(name = "Condition", 
+                    values = c("ctrl" = "green", "cp" = "blue", "fire" = "red"),  # Ensure fill colors match
+                    labels = c("ctrl" = "Control", "cp" = "Cold Pressor", "fire" = "Fire")) +  # Custom labels
+  theme(axis.text.x = element_text(size = 13),
+        axis.text.y = element_text(size = 17),
+        axis.title.x = element_text(size = 17),
+        axis.title.y = element_text(size = 17),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 13),
+        strip.text = element_text(size = 13))
+#jpeg("D:/UA_stuff/seagate_hard_drive/Nav Stress Data/dissertation/pics/auci_ExcessPath_LMM.jpeg", width = 7, height = 6, units = 'in', res = 500)
+auci_excessPath_condition_LMM
+#dev.off()
+
+
+# Old Plot - only plots raw data which doesn't quite match the LMM results making it confusing
+auci_excessPath_condition <- ggplot(bigData, aes(x = auc_bc, y = log_excessPath, color = condition)) + 
   geom_point() +
   geom_smooth(method = "lm", se = TRUE, aes(fill = condition), alpha = 0.08) +
   theme_classic() +
-  labs(x = "AUC (Log)", y = "Excess Path (Log)",
+  labs(x = "AUCi", y = "Excess Path (Log)",
        color = "Condition", fill = "Condition") +
   scale_color_manual(name = "Condition", 
                      values = c("ctrl" = "green", "cp" = "blue", "fire" = "red"),  # Change colors as needed
@@ -1010,8 +1204,8 @@ aucLog_excessPath_condition <- ggplot(bigData, aes(x = auc_log, y = log_excessPa
         legend.title = element_text(size = 13),
         strip.text = element_text(size = 13))
 
-#jpeg("D:/Nav Stress Data/dissertation/pics/auc_logExcessPath.jpeg", width = 7, height = 6, units = 'in', res = 500)
-aucLog_excessPath_condition
+#jpeg("D:/UA_stuff/seagate_hard_drive/Nav Stress Data/dissertation/pics/auci_ExcessPath.jpeg", width = 7, height = 6, units = 'in', res = 500)
+auci_excessPath_condition
 #dev.off()
 
 # The baseline corrected one looks weird because the fire condition has less variance than the other two conditions

@@ -13,7 +13,8 @@ library(BayesFactor)
 rm(list = ls())
 
 # Set working directory
-setwd("E:/Nav Stress Data/Salimetrics reports") # from hard drive
+#setwd("E:/Nav Stress Data/Salimetrics reports") # from hard drive
+setwd("D:/UA_stuff/seagate_hard_drive/Nav Stress Data/Salimetrics reports")
 
 # Enter the data - for now only analyze the complete cases
 #samples9Data <- readxl::read_excel("saliva_data_bySubject.xlsx", sheet = "9samples")
@@ -51,6 +52,12 @@ whole_cort <- long_data %>%
 whole_cort <- whole_cort %>%
   separate_wider_delim(num_cond, delim = "_", names = c("subjNum", "condition"))
 whole_cort$log_cort <- log(whole_cort$mean_cort)
+
+# Make subjNum, condition, gender, and time factors
+whole_cort$subjNum <- as.factor(whole_cort$subjNum)
+whole_cort$condition <- as.factor(whole_cort$condition)
+whole_cort$gender <- as.factor(whole_cort$gender)
+whole_cort$time <- as.factor(whole_cort$time)
 
 bc_cort <- long_data %>%
   filter(time == "bc_post1" | time == "bc_post15" | time == "bc_post30")
@@ -90,6 +97,12 @@ log_cort_table <- whole_cort %>%
 # anova
 res.aov <- anova_test(data = whole_cort, dv = log_cort, wid = subjNum, within = c(condition,time))
 get_anova_table(res.aov) # time and condition*time interaction sig
+
+# Bayes Factor
+bayes_rm <- anovaBF(log_cort ~ condition*time + subjNum, data = whole_cort, whichRandom = "subjNum")
+bayes_rm
+# calculate interaction term
+bayes_rm[4] / bayes_rm[3]
 
 # testing simple main effects
 
@@ -204,6 +217,36 @@ one.way2.time <- good_cp_data %>%
   get_anova_table() %>%
   adjust_pvalue(method = "bonferroni")
 one.way2.time # cp is sig - same as above
+
+# Add Bayes Factor
+# Split the data by condition first
+cp_data <- good_cp_data %>%
+  filter(condition == "cp")
+
+ctrl_data <- good_cp_data %>%
+  filter(condition == "ctrl")
+
+fire_data <- good_cp_data %>%
+  filter(condition == "fire")
+
+# Bayes Factor calculation
+bayes_cp <- anovaBF(
+  log_cort ~ time + subjNum,
+  data = cp_data,
+  whichRandom = "subjNum")
+bayes_cp
+
+bayes_ctrl <- anovaBF(
+  log_cort ~ time + subjNum,
+  data = ctrl_data,
+  whichRandom = "subjNum")
+bayes_ctrl
+
+bayes_fire <- anovaBF(
+  log_cort ~ time + subjNum,
+  data = fire_data,
+  whichRandom = "subjNum")
+bayes_fire
 
 # equal cases so pairing it will work
 pwc2.time <- good_cp_data %>%
