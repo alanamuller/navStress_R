@@ -151,6 +151,8 @@ nav_summary <- longNav %>%
     sd_grid_prop = sd(grid_proportion, na.rm = TRUE)
   )
 
+#write.csv(nav_summary, "D:/UA_stuff/seagate_hard_drive/Nav Stress Data/nav_grid_proportion_byID.csv", row.names = FALSE)
+
 # MANUSCRIPT PIC
 
 tick_labels <- c("Novel Grids", "Outer Grids", "Inner Grids")
