@@ -1,0 +1,112 @@
+---
+title: "additional_analyses_for_review"
+author: "Alana Muller"
+date: "2026-11-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+Load packages
+```{r}
+library(lme4)
+library(lmerTest)
+library(ggplot2)
+library(tidyr)
+library(tidyverse)
+library(dplyr)
+```
+
+Start fresh
+```{r}
+rm(list = ls())
+```
+
+Import data
+```{r}
+recreate_data <- read.csv("D:/UA_stuff/seagate_hard_drive/Nav Stress Data/combined_recreatePathsLogData_updated.csv")
+grid_proportion_data <- read.csv("D:/UA_stuff/seagate_hard_drive/Nav Stress Data/nav_grid_proportion_byID.csv")
+```
+
+Extra analyses
+
+Do people who learned the path better have different patterns of inner, outer, or novel grid usage?
+```{r}
+# To address the question, make a table with one row representing each person's adjusted percent correct and each type of grid proportion, collapsed across all conditions at first and noly with recreated path 1 since that is the one that happened before any stressors
+
+recreate_avg <- recreate_data %>%
+  group_by(subjectID) %>%
+  summarize(
+    avg_adj_percentCorrect = mean(adj_percent_correct))
+
+grid_avg <- grid_proportion_data %>%
+  group_by(subjectID, grid_type) %>%
+  summarise(
+    avg_grid_prop = mean(mean_grid_prop)
+  )
+
+recreate_grid_avg <- recreate_avg %>%
+  left_join(grid_avg, by = "subjectID")
+
+# Restructure the data
+recreate_grid_avg$subjectID <- as.factor(recreate_grid_avg$subjectID)
+recreate_grid_avg$grid_type <- as.factor(recreate_grid_avg$grid_type)
+
+# Cool new graph! As average recreation percent increases, use of innter grid proportion increases (visually, stats next)
+ggplot(recreate_grid_avg, 
+       aes(x = avg_adj_percentCorrect, 
+           y = avg_grid_prop,
+           color = grid_type)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    x = "Average Recreation Percent Correct",
+    y = "Grid Proportion",
+    color = "Grid Type"
+  ) +
+  theme_classic()
+
+# We will use an isometric log-ratio (ILR) transformation
+# First, make the data wide to do the analysis
+
+recreate_wide <- recreate_grid_avg %>%
+  pivot_wider(names_from = grid_type, values_from = avg_grid_prop)
+
+# Check for proportions of zero
+recreate_wide %>%
+  summarise(
+    inner_zero = sum(inner_proportion == 0, na.rm = TRUE),
+    outer_zero = sum(outer_proportion == 0, na.rm = TRUE),
+    novel_zero = sum(novel_proportion == 0, na.rm = TRUE)
+  )
+
+# Calculate ILR coordinates
+recreate_wide <- recreate_wide %>%
+  mutate(
+    ilr1 = sqrt(2/3) * log(
+      inner_proportion / sqrt(outer_proportion * novel_proportion)
+    ),
+    ilr2 = sqrt(1/2) * log(
+      outer_proportion / novel_proportion
+    )
+  )
+
+# Run the regression model
+grid_model <- manova(
+  cbind(ilr1, ilr2) ~ avg_adj_percentCorrect,
+  data = recreate_wide
+)
+
+summary(grid_model, test = "Pillai")
+
+summary.aov(grid_model) # examine each separately
+
+# So this analysis says that greater accuracy predicts using more inner grids
+```
+
+

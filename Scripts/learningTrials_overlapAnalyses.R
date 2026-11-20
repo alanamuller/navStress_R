@@ -93,6 +93,9 @@ graphData$incorrect_pathANDNovel <- graphData$incorrect_recreation_percent + gra
 # make a column for adjusted percent corr
 graphData$adj_percent_correct <- (graphData$correct_recreation_percent - graphData$incorrect_recreation_percent - graphData$percent_grid_overlap_novel)
 
+# Write to csv
+#write.csv(graphData, "D:/UA_stuff/seagate_hard_drive/Nav Stress Data/combined_recreatePathsLogData_updated.csv", row.names = FALSE)
+
 # summaries by subject and path_recreate_cat
 subjTable <- graphData %>%
   group_by(subjectID) %>%
