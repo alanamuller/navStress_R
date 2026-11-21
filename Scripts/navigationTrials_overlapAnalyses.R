@@ -28,7 +28,7 @@ rm(list = ls())
 ##### Read in data
 # setwd("E:/Nav Stress Data/") # set working directory
 # setwd("C:/Users/amuller/Desktop/Alana/UA/HSCL/Stress shortcuts") # for developing
-setwd("D:/UA_stuff/seagate_hard_drive/Nav Stress Data/")
+setwd("F:/UA_stuff/seagate_hard_drive/Nav Stress Data/")
 
 ################################# look at nav trials data
 
@@ -148,7 +148,17 @@ nav_summary <- longNav %>%
   summarize(
     count = n(),
     mean_grid_prop = mean(grid_proportion, na.rm = TRUE), 
-    sd_grid_prop = sd(grid_proportion, na.rm = TRUE)
+    sd_grid_prop = sd(grid_proportion, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+nav_summary_block <- longNav %>%
+  group_by(subjectID, block, grid_type, moreFamiliarPath, condition) %>%
+  summarize(
+    count = n(),
+    mean_grid_prop = mean(grid_proportion, na.rm = TRUE), 
+    sd_grid_prop = sd(grid_proportion, na.rm = TRUE),
+    .groups = "drop"
   )
 
 #write.csv(nav_summary, "D:/UA_stuff/seagate_hard_drive/Nav Stress Data/nav_grid_proportion_byID.csv", row.names = FALSE)
@@ -189,6 +199,7 @@ nav_summary %>%
 
 nav_summary <- as.data.frame(nav_summary)
 
+# repeated ANOVA
 res.aov <- anova_test(data = nav_summary, dv = mean_grid_prop, wid = subjectID, 
                       within = c(condition, grid_type))
 get_anova_table(res.aov) # grid type is sig
@@ -214,6 +225,82 @@ ggplot(cort_long, aes(x = time, y = cort_value, color = condition, group = inter
   theme_classic() + 
   labs(x = "Time", y = "Cortisol Raw Value") +
   facet_wrap(~subjNum)
+
+### Graph faceted by block number (for reviews)
+tick_labels <- c("Novel Grids", "Outer Grids", "Inner Grids")
+
+navTrialsMean_block <- ggplot(nav_summary_block, aes(x = grid_type, y = mean_grid_prop, fill = condition)) + 
+  geom_boxplot(outliers = FALSE) + geom_jitter(position = position_jitterdodge()) +
+  stat_summary(aes(group = condition), fun = mean, geom = "point", shape = 18, size = 3, color = "red", position = position_dodge(0.75)) +
+  labs(x = "Grid Type", y = "Mean Grid Proportion", fill = "Condition") +
+  theme_classic() +
+  scale_x_discrete(labels = tick_labels) + 
+  scale_fill_discrete(name = "Condition", labels = c("Cold Pressor", "Control", "Fire Environment"), type = c("deep sky blue", "lime green", "salmon")) +
+  theme(axis.text.x = element_text(size = 13), 
+        axis.text.y = element_text(size = 17), 
+        axis.title.x = element_text(size = 17),
+        axis.title.y = element_text(size = 17),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 13), 
+        strip.text = element_text(size = 13)) + 
+  facet_wrap(~block)
+#jpeg("D:/Nav Stress Data/dissertation/pics/navTrialsMeanProp.jpeg", width = 8, height = 5.75, units = 'in', res = 500)
+navTrialsMean_block
+#dev.off()
+
+# repeated ANOVA
+res.aov_block <- anova_test(data = nav_summary_block, dv = mean_grid_prop, wid = subjectID, 
+                      within = c(condition, block, grid_type))
+get_anova_table(res.aov_block) # grid type and block:grid_type is significant
+
+# Breaking down the interaction by block
+block_grid_summary <- nav_summary_block %>%
+  group_by(subjectID, block, grid_type) %>%
+  summarize(
+    mean_grid_prop = mean(mean_grid_prop, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Test the effect of grid type separately within each block
+block_grid_anova <- block_grid_summary %>%
+  group_by(block) %>%
+  anova_test(
+    dv = mean_grid_prop,
+    wid = subjectID, 
+    within = grid_type
+  )
+get_anova_table(block_grid_anova)
+
+# Run pairwise comparisons within each block
+block_grid_pwc <- block_grid_summary %>%
+  group_by(block) %>%
+  pairwise_t_test(
+    mean_grid_prop ~ grid_type,
+    paired = TRUE,
+    p.adjust.method = "bonferroni"
+  )
+block_grid_pwc
+
+# Test the effect of block on each grid_type
+grid_block_anova <- block_grid_summary %>%
+  group_by(grid_type) %>%
+  anova_test(
+    dv = mean_grid_prop,
+    wid = subjectID,
+    within = block
+  )
+get_anova_table(grid_block_anova)
+
+# pairwise comparisons
+grid_block_pwc <- block_grid_summary %>%
+  group_by(grid_type) %>%
+  pairwise_t_test(
+    mean_grid_prop ~ block,
+    paired = TRUE,
+    p.adjust.method = "bonferroni"
+  )
+grid_block_pwc # the inner and outer grids from block 1 are different than blocks 2 and 3
+# but blocks 2 and 3 aren't different than each other
 
 # Add another analysis to see if cort AUC values were associated with excess path for each condition - linear mixed effects model
 # Add auc_data_long to excess_path_data

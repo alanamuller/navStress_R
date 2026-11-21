@@ -29,8 +29,11 @@ rm(list = ls())
 
 Import data
 ```{r}
+# D drive for my laptop
+# F drive for my work desktop
 recreate_data <- read.csv("D:/UA_stuff/seagate_hard_drive/Nav Stress Data/combined_recreatePathsLogData_updated.csv")
 grid_proportion_data <- read.csv("D:/UA_stuff/seagate_hard_drive/Nav Stress Data/nav_grid_proportion_byID.csv")
+navTrials_data <- read.csv("F:/UA_stuff/seagate_hard_drive/Nav Stress Data/combined_navTrialsLogData.csv")
 ```
 
 Extra analyses
@@ -57,7 +60,7 @@ recreate_grid_avg <- recreate_avg %>%
 recreate_grid_avg$subjectID <- as.factor(recreate_grid_avg$subjectID)
 recreate_grid_avg$grid_type <- as.factor(recreate_grid_avg$grid_type)
 
-# Cool new graph! As average recreation percent increases, use of innter grid proportion increases (visually, stats next)
+# Cool new graph! As average recreation percent increases, use of inner grid proportion increases (visually, stats next)
 ggplot(recreate_grid_avg, 
        aes(x = avg_adj_percentCorrect, 
            y = avg_grid_prop,
@@ -109,4 +112,35 @@ summary.aov(grid_model) # examine each separately
 # So this analysis says that greater accuracy predicts using more inner grids
 ```
 
+I am making a histogram of the navigation duration times to see how long people tended to take to navigate to an object
+```{r}
+hist(navTrials_data$Navigate_duration)
+
+# Make a table of navigation block time for each person
+block_duration <- navTrials_data %>%
+  group_by(subjectID, block) %>%
+  summarise(
+    total_duration_s = sum(Navigate_duration, na.rm = TRUE),
+    total_duration_min = total_duration_s/60,
+    .groups = "drop"
+  )
+
+# Make a table of each person's total navigation test phase duration
+navTest_duration <- navTrials_data %>%
+  group_by(subjectID) %>%
+  summarise(
+    total_test_duration_s = sum(Navigate_duration, na.rm = TRUE),
+    total_test_duration_min = total_test_duration_s/60
+  )
+
+# Range, mean, and sd duration for blocks and total test phase
+range(block_duration$total_duration_min) # 11.3182 121.0454 (2hrs)
+mean(block_duration$total_duration_min) # 31.76658
+sd(block_duration$total_duration_min) # 20.82095
+
+range(navTest_duration$total_test_duration_min) # 47.38689 244.52988 (4hrs)
+mean(navTest_duration$total_test_duration_min) # 95.29975
+sd(navTest_duration$total_test_duration_min) # 49.01016
+
+```
 
