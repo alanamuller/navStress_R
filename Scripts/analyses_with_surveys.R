@@ -1,7 +1,10 @@
 # Correlations with surveys
 
-# Santa Barbara Sense of Direction 
-# Perceived stress survey
+### Data Collection Surveys
+# 1. Demographics
+# 2. Santa Barbara Sense of Direction 
+# 3. Scene and Orientation-Dependent Pointing Task (SOT)
+# 4. Perceived Stress survey
 
 library(openxlsx)
 library(ggplot2)
@@ -14,6 +17,7 @@ library(Hmisc)
 library(psych)
 library(correlation)
 library(corrplot)
+library(Hmisc)
 
 rm(list = ls())
 
@@ -22,12 +26,120 @@ rm(list = ls())
 # setwd("C:/Users/amuller/Desktop/Alana/UA/HSCL/Stress shortcuts") # for developing
 setwd("D:/UA_stuff/seagate_hard_drive/Nav Stress Data")
 
+demog_data <- readxl::read_excel("NavStressDemographics.xlsx", sheet = "NavStressRData")
 sbsod_perceivedStress_data <- read.csv("sbsod_perceivedStress_scored.csv") # read in survey file
+
+sot_data <- read.xlsx("SOT_data.xlsx")
 avgExcessPathSubj <- read.csv("avgExcessPathSubj.csv") # read in excess path file
 learningTrials <- read.csv("learningTrialsBigMergeData.csv") # read in the learning file)
-sot_data <- read.xlsx("SOT_data.xlsx")
 nav_data <- read.csv("nav_grid_proportion_byID.csv")
 auc_data <- read.csv("auc_data.csv")
+
+
+##### First change participant ID so be the same for all the datasets
+
+# First change participant ID to subjectID
+demog_data <- demog_data %>%
+  rename(subjectID = `Participant ID`) %>%
+  mutate(subjectID = as.numeric(subjectID))
+sbsod_perceivedStress_data <- sbsod_perceivedStress_data %>%
+  rename(subjectID = Participant.ID) %>%
+  mutate(subjectID = as.numeric(subjectID))
+
+##### Do basic means for the demographics and surveys
+# For demographics: sex, age, video game experience, race
+
+# First rename the demographic variables
+demog_data <- demog_data %>%
+  rename(
+    Sex = `Sex assigned at birth`,
+    video_game_exp = `How would you rate you exposure-to/experience-with video games?`
+  )
+
+# Count sex
+count_sex <- demog_data %>%
+  count(Sex) # Female = 17, Male = 14
+
+# Age mean, sd, and range
+age_stats <- demog_data %>%
+  summarise(
+    Mean = mean(Age, na.rm = TRUE), # 21.64516
+    SD = sd(Age, na.rm = TRUE), # 3.665591
+    Min = min(Age, na.rm = TRUE), # 18
+    Max = max(Age, na.rm = TRUE) # 32
+  )
+
+# Video game experience mean, sd, and range
+vge_stats <- demog_data %>%
+  summarise(
+    Mean = mean(video_game_exp, na.rm = TRUE), # 3.419355
+    SD = sd(video_game_exp, na.rm = TRUE), # 1.088552
+    Min = min(video_game_exp, na.rm = TRUE), # 1
+    Max = max(video_game_exp, na.rm = TRUE) # 5
+  )
+
+# Race
+count_race <- demog_data %>%
+  count(Race)
+
+### Now do the means, sd, and ranges for the SBSOD, SOT, and PSS
+# SBSOD (possible range from 1 to 7)
+sbsod_stats <- sbsod_perceivedStress_data %>%
+  summarise(
+    Mean = mean(sbsod_mean, na.rm = TRUE),
+    SD = sd(sbsod_mean, na.rm = TRUE),
+    Min = min(sbsod_mean, na.rm = TRUE),
+    Max = max(sbsod_mean, na.rm = TRUE)
+  )
+
+# SOT (possible range from 0 to 180)
+SOT_stats <- sot_data %>%
+  summarise(
+    Mean = mean(SOT_average_angular_error, na.rm = TRUE),
+    SD = sd(SOT_average_angular_error, na.rm = TRUE),
+    Min = min(SOT_average_angular_error, na.rm = TRUE),
+    Max = max(SOT_average_angular_error, na.rm = TRUE)
+  )
+
+# Perceived stress score (possible range from 0 to 40)
+pss_stats <- sbsod_perceivedStress_data %>%
+  summarise(
+    Mean = mean(perceivedStress_totalScore, na.rm = TRUE),
+    SD = sd(perceivedStress_totalScore, na.rm = TRUE),
+    Min = min(perceivedStress_totalScore, na.rm = TRUE),
+    Max = max(perceivedStress_totalScore, na.rm = TRUE)
+  )
+
+# Add participant mean scores for each survey measure to the demographic data
+demog_data <- demog_data %>%
+  left_join(
+    sbsod_perceivedStress_data %>% select(subjectID, sbsod_mean, perceivedStress_totalScore),
+    by = "subjectID"
+  )
+demog_data <- demog_data %>%
+  left_join(
+    sot_data %>% select(subjectID, SOT_average_angular_error),
+    by = "subjectID"
+  )
+
+# Now compute the correlations between the three measures
+cor_data <- demog_data %>%
+  select(sbsod_mean, SOT_average_angular_error, perceivedStress_totalScore)
+
+cor_results <- rcorr(
+  as.matrix(cor_data),
+  type = "pearson"
+)
+
+# Correlations
+round(cor_results$r, 2)
+
+# P-values
+round(cor_results$P, 3)
+
+# Sample sizes
+cor_results$n
+
 
 # reset working directory to import cortisol
 setwd("D:/UA_stuff/seagate_hard_drive/Nav Stress Data/Salimetrics reports") # from hard drive
@@ -119,15 +231,6 @@ correlation(
   missing = "keep_pairwise"
 )
 
-
-
-
-
-
-
-
-
-
 # Plot
 ggplot(corr_df, aes(x = Var2, y = Var1)) +
   geom_tile(
@@ -157,11 +260,6 @@ ggplot(corr_df, aes(x = Var2, y = Var1)) +
       hjust = 1
     )
   )
-
-
-
-
-
 
 # Is baseline cortisol related to perceived stress score? - no, not sig
 cor.test(bigMergeData$mean_cort, bigMergeData$perceivedStress_totalScore)
